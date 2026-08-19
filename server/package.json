@@ -1,0 +1,17 @@
+{
+  "name": "verdant-gis-payment-server-v14",
+  "private": true,
+  "version": "14.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.54.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "razorpay": "^2.9.8"
+  }
+}
