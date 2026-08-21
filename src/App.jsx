@@ -7427,14 +7427,10 @@ export default function App() {
 ========================================================= */
 
 function DatasetRoute() {
-  const { id } =
-    useParams();
+  const { id } = useParams();
 
-  const [remote, setRemote] =
-    useState(null);
-
-  const [loading, setLoading] =
-    useState(true);
+  const [remote, setRemote] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -7450,29 +7446,373 @@ function DatasetRoute() {
         "id,slug,title,description,category_id,location,coverage,price,currency,formats,feature_count,crs,file_size,source,updated_label,thumbnail_url,preview_geojson_url,download_path,status,created_at,updated_at,categories(name)"
       )
       .eq("slug", id)
-      .eq(
-        "status",
-        "published"
-      )
+      .eq("status", "published")
       .maybeSingle()
-      .then(
-        ({
-          data,
-        }) => {
-          if (active) {
-            setRemote(
-              data || null
-            );
-
-            setLoading(false);
-          }
+      .then(({ data }) => {
+        if (active) {
+          setRemote(data || null);
+          setLoading(false);
         }
-      );
+      });
 
     return () => {
       active = false;
     };
   }, [id]);
+
+  /*
+   * =========================================================
+   * DYNAMIC SEO METADATA
+   * =========================================================
+   */
+
+  useEffect(() => {
+    if (!remote) return;
+
+    const datasetTitle =
+      remote.title || "GIS Dataset";
+
+    const categoryName =
+      remote.categories?.name || "GIS Data";
+
+    const location =
+      remote.location ||
+      remote.coverage ||
+      "India";
+
+    const description =
+      remote.description ||
+      `Explore ${datasetTitle}, a ${categoryName} geospatial dataset available through Verdant GIS.`;
+
+    /*
+     * SEO TITLE
+     */
+
+    document.title =
+      `${datasetTitle} | GIS Data & Shapefile | Verdant GIS`;
+
+    /*
+     * META DESCRIPTION
+     */
+
+    const seoDescription =
+      `${description} GIS data for mapping, research, remote sensing, spatial analysis and planning.`.slice(
+        0,
+        160
+      );
+
+    let metaDescription =
+      document.querySelector(
+        'meta[name="description"]'
+      );
+
+    if (!metaDescription) {
+      metaDescription =
+        document.createElement("meta");
+
+      metaDescription.setAttribute(
+        "name",
+        "description"
+      );
+
+      document.head.appendChild(
+        metaDescription
+      );
+    }
+
+    metaDescription.setAttribute(
+      "content",
+      seoDescription
+    );
+
+    /*
+     * CANONICAL
+     *
+     * Your dataset URL uses the slug from Supabase.
+     */
+
+    const canonicalUrl =
+      `https://verdantgis.com/dataset/${remote.slug}`;
+
+    let canonical =
+      document.querySelector(
+        'link[rel="canonical"]'
+      );
+
+    if (!canonical) {
+      canonical =
+        document.createElement("link");
+
+      canonical.setAttribute(
+        "rel",
+        "canonical"
+      );
+
+      document.head.appendChild(
+        canonical
+      );
+    }
+
+    canonical.setAttribute(
+      "href",
+      canonicalUrl
+    );
+
+    /*
+     * =========================================================
+     * OPEN GRAPH
+     * =========================================================
+     */
+
+    const setPropertyMeta = (
+      property,
+      content
+    ) => {
+      let element =
+        document.querySelector(
+          `meta[property="${property}"]`
+        );
+
+      if (!element) {
+        element =
+          document.createElement("meta");
+
+        element.setAttribute(
+          "property",
+          property
+        );
+
+        document.head.appendChild(
+          element
+        );
+      }
+
+      element.setAttribute(
+        "content",
+        content
+      );
+    };
+
+    setPropertyMeta(
+      "og:title",
+      `${datasetTitle} | Verdant GIS`
+    );
+
+    setPropertyMeta(
+      "og:description",
+      seoDescription
+    );
+
+    setPropertyMeta(
+      "og:url",
+      canonicalUrl
+    );
+
+    setPropertyMeta(
+      "og:type",
+      "website"
+    );
+
+    setPropertyMeta(
+      "og:site_name",
+      "Verdant GIS"
+    );
+
+    if (remote.thumbnail_url) {
+      setPropertyMeta(
+        "og:image",
+        remote.thumbnail_url
+      );
+    }
+
+    /*
+     * =========================================================
+     * TWITTER / X
+     * =========================================================
+     */
+
+    const setNameMeta = (
+      name,
+      content
+    ) => {
+      let element =
+        document.querySelector(
+          `meta[name="${name}"]`
+        );
+
+      if (!element) {
+        element =
+          document.createElement("meta");
+
+        element.setAttribute(
+          "name",
+          name
+        );
+
+        document.head.appendChild(
+          element
+        );
+      }
+
+      element.setAttribute(
+        "content",
+        content
+      );
+    };
+
+    setNameMeta(
+      "twitter:card",
+      "summary_large_image"
+    );
+
+    setNameMeta(
+      "twitter:title",
+      `${datasetTitle} | Verdant GIS`
+    );
+
+    setNameMeta(
+      "twitter:description",
+      seoDescription
+    );
+
+    if (remote.thumbnail_url) {
+      setNameMeta(
+        "twitter:image",
+        remote.thumbnail_url
+      );
+    }
+
+    /*
+     * =========================================================
+     * DATASET STRUCTURED DATA
+     * =========================================================
+     */
+
+    const oldSchema =
+      document.getElementById(
+        "verdant-dataset-schema"
+      );
+
+    if (oldSchema) {
+      oldSchema.remove();
+    }
+
+    const schema =
+      document.createElement("script");
+
+    schema.id =
+      "verdant-dataset-schema";
+
+    schema.type =
+      "application/ld+json";
+
+    schema.textContent =
+      JSON.stringify({
+        "@context":
+          "https://schema.org",
+
+        "@type":
+          "Dataset",
+
+        name:
+          datasetTitle,
+
+        description:
+          description,
+
+        url:
+          canonicalUrl,
+
+        creator: {
+          "@type":
+            "Organization",
+
+          name:
+            "Verdant GIS",
+
+          url:
+            "https://verdantgis.com/"
+        },
+
+        publisher: {
+          "@type":
+            "Organization",
+
+          name:
+            "Verdant GIS",
+
+          url:
+            "https://verdantgis.com/"
+        },
+
+        spatialCoverage:
+          location,
+
+        keywords: [
+          "GIS data",
+          "GIS dataset",
+          "geospatial data",
+          "shapefile",
+          "remote sensing data",
+          "spatial data",
+          categoryName,
+          location
+        ],
+
+        ...(remote.formats?.length
+          ? {
+              encodingFormat:
+                remote.formats
+            }
+          : {}),
+
+        ...(remote.updated_at
+          ? {
+              dateModified:
+                remote.updated_at
+            }
+          : {}),
+
+        ...(remote.created_at
+          ? {
+              datePublished:
+                remote.created_at
+            }
+          : {}),
+
+        ...(remote.thumbnail_url
+          ? {
+              image:
+                remote.thumbnail_url
+            }
+          : {})
+      });
+
+    document.head.appendChild(
+      schema
+    );
+
+    /*
+     * Cleanup structured data
+     */
+
+    return () => {
+      const schemaElement =
+        document.getElementById(
+          "verdant-dataset-schema"
+        );
+
+      if (schemaElement) {
+        schemaElement.remove();
+      }
+    };
+  }, [remote]);
+
+  /*
+   * =========================================================
+   * LOADING
+   * =========================================================
+   */
 
   if (loading) {
     return (
@@ -7493,6 +7833,12 @@ function DatasetRoute() {
     );
   }
 
+  /*
+   * =========================================================
+   * FALLBACK
+   * =========================================================
+   */
+
   if (!remote) {
     return (
       <DatasetPage
@@ -7502,21 +7848,19 @@ function DatasetRoute() {
   }
 
   /*
-   * CRITICAL FIX:
+   * =========================================================
+   * DATASET OBJECT
    *
-   * id   = remote.id   -> Supabase UUID
-   * slug = remote.slug -> URL slug
-   *
-   * NEVER use remote.slug as id.
+   * IMPORTANT:
+   * UUID and slug remain separate.
+   * =========================================================
    */
 
   const d = {
     ...remote,
 
-    // FIXED:
     id: remote.id,
 
-    // Slug remains separate
     slug: remote.slug,
 
     category:
@@ -7558,7 +7902,6 @@ function DatasetRoute() {
   );
 }
 
-
 /* =========================================================
    REMOTE DATASET PAGE
 ========================================================= */
@@ -7578,7 +7921,7 @@ function DatasetPageRemote({
       <main className="detail-page">
         <div className="breadcrumbs">
           <Link to="/store">
-            Store
+            GIS Data Catalogue
           </Link>
 
           <span>/</span>
@@ -7626,7 +7969,13 @@ function DatasetPageRemote({
             <p className="lead">
               {d.description}
             </p>
-
+            <p className="dataset-seo-intro">
+              This {d.category || "GIS"} dataset is available
+              for GIS mapping, spatial analysis, remote sensing,
+              research, planning and other geospatial applications.
+              The dataset covers {d.coverage || d.location || "India"}
+              and can be used with common GIS tools and workflows.
+            </p>
             <div className="price">
               {d.price === 0
                 ? "FREE"
@@ -7678,8 +8027,7 @@ function DatasetPageRemote({
             </span>
 
             <h2>
-              Everything you need to
-              know.
+              {d.title} — Dataset Details
             </h2>
           </div>
 
