@@ -2738,12 +2738,12 @@ function CategoriesPage() {
   useEffect(() => {
     let active = true;
 
-    // SEO metadata for the Categories page
+    // SEO metadata
     document.title =
-      "GIS Data Categories India | Shapefiles & Geospatial Datasets | Verdant GIS";
+      "GIS Data, Shapefiles & Remote Sensing Datasets | Verdant GIS";
 
     const description =
-      "Explore GIS data categories for India including administrative boundaries, river networks, agriculture, land use, environmental and other geospatial datasets and shapefiles.";
+      "Explore GIS data, shapefiles, GeoJSON, raster and vector datasets, remote sensing data, satellite data, DEM, land use, agriculture, environmental and other geospatial datasets on Verdant GIS.";
 
     let meta = document.querySelector('meta[name="description"]');
 
@@ -2768,6 +2768,7 @@ function CategoriesPage() {
       "https://verdantgis.com/categories/"
     );
 
+    // Load existing catalogue data
     Promise.all([getCategories(), getDatasets()])
       .then(([categoryResult, datasetResult]) => {
         if (!active) return;
@@ -2776,7 +2777,7 @@ function CategoriesPage() {
           setError(
             categoryResult.error?.message ||
               datasetResult.error?.message ||
-              "Could not load categories."
+              "Could not load catalogue categories."
           );
         }
 
@@ -2785,7 +2786,9 @@ function CategoriesPage() {
       })
       .catch((err) => {
         if (active) {
-          setError(err.message || "Could not load categories.");
+          setError(
+            err.message || "Could not load catalogue categories."
+          );
         }
       })
       .finally(() => {
@@ -2803,43 +2806,55 @@ function CategoriesPage() {
 
       <main className="categories-page">
 
+        {/* PAGE HERO */}
         <div className="page-hero categories-hero">
           <span className="section-kicker">
-            GIS DATA CATEGORIES
+            GIS DATA CATALOGUE
           </span>
 
           <h1>
-            GIS Data & Geospatial Datasets for India
+            GIS Data, Shapefiles & Remote Sensing Datasets
           </h1>
 
           <p>
-            Explore India-focused GIS datasets, shapefiles and
-            geospatial data by category. Find ready-to-use data for
-            agriculture, research, planning, mapping and spatial
-            analysis through the Verdant GIS catalogue.
+            Explore a growing catalogue of GIS data, shapefiles,
+            GeoJSON, raster and vector datasets, remote sensing
+            data and other geospatial resources for mapping,
+            research, agriculture, environmental analysis,
+            planning and spatial modelling.
           </p>
         </div>
 
-        {error && <div className="upload-status">{error}</div>}
+        {error && (
+          <div className="upload-status">
+            {error}
+          </div>
+        )}
 
         {loading ? (
           <div className="table-loading">
             <LoaderCircle className="spin" size={28} />
-            <span>Loading categories…</span>
+
+            <span>
+              Loading catalogue…
+            </span>
           </div>
         ) : !categories.length ? (
           <div className="empty-state">
             <Layers3 size={36} />
 
-            <h3>No categories available</h3>
+            <h3>
+              No categories available
+            </h3>
 
             <p>
-              Categories created in the admin/database will appear
-              here.
+              Categories created in the admin/database will
+              appear here.
             </p>
           </div>
         ) : (
           <>
+            {/* CATEGORY CARDS */}
             <div className="categories-large-grid">
               {categories.map((category) => {
                 const count = datasets.filter(
@@ -2865,7 +2880,9 @@ function CategoriesPage() {
                         GIS DATA CATEGORY
                       </span>
 
-                      <h2>{category.name}</h2>
+                      <h2>
+                        {category.name}
+                      </h2>
 
                       <p>
                         {count}{" "}
@@ -2881,32 +2898,52 @@ function CategoriesPage() {
               })}
             </div>
 
-            {/* SEO supporting content */}
+            {/* SEO CONTENT */}
             <section className="section">
               <div className="page-hero">
+
                 <span className="section-kicker">
-                  INDIA GIS DATA
+                  GEOSPATIAL DATA
                 </span>
 
                 <h2>
-                  Explore GIS datasets and shapefiles for India
+                  Explore GIS and geospatial data
                 </h2>
 
                 <p>
-                  Verdant GIS provides a growing catalogue of
-                  geospatial datasets designed for GIS mapping,
-                  agriculture, environmental analysis, research,
-                  planning and location intelligence.
+                  Verdant GIS is a geospatial data marketplace
+                  providing access to ready-to-use spatial data
+                  for GIS, remote sensing, mapping, research,
+                  agriculture, environmental analysis, planning
+                  and spatial modelling.
                 </p>
 
                 <p>
-                  Browse GIS data including administrative boundaries,
-                  river networks, agriculture-related datasets,
-                  land use and land cover information, environmental
-                  data and other spatial datasets. Dataset availability
-                  depends on the categories and published data currently
-                  available in the Verdant GIS catalogue.
+                  Browse datasets in vector and raster formats,
+                  including shapefiles, GeoJSON and other
+                  geospatial data resources. Explore datasets
+                  covering administrative boundaries, rivers and
+                  hydrology, agriculture, land use and land cover,
+                  environmental information, transportation,
+                  soils, elevation and other spatial themes.
                 </p>
+
+                <p>
+                  The catalogue can also include remote sensing
+                  and satellite-derived datasets suitable for
+                  spatial analysis, image interpretation,
+                  environmental monitoring, land assessment and
+                  agricultural applications.
+                </p>
+
+                <p>
+                  Whether you are looking for GIS data for
+                  research, QGIS projects, remote sensing
+                  analysis, agriculture, environmental studies,
+                  planning or mapping, explore the available
+                  datasets through the Verdant GIS catalogue.
+                </p>
+
               </div>
             </section>
           </>
