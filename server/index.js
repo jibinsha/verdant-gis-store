@@ -1245,24 +1245,26 @@ app.post(
         });
       }
 
-      /*
-       * 8. SAFE FILE NAME
-       */
+/*
+ * 8. SAFE FILE NAME
+ *
+ * Use the dataset title for the downloaded filename
+ * instead of the internal storage filename.
+ */
 
-      const originalName =
-        resolvedPath
-          .split("/")
-          .pop() ||
-        `${
-          dataset.slug ||
-          "dataset"
-        }.zip`;
+const baseName =
+  dataset.title ||
+  dataset.slug ||
+  "verdant-gis-dataset";
 
-      const safeName =
-        originalName.replace(
-          /[^a-zA-Z0-9._-]/g,
-          "_"
-        );
+const safeBaseName =
+  baseName
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const safeName =
+  `${safeBaseName || "verdant-gis-dataset"}.zip`;
 
       /*
        * 9. DOWNLOAD COUNT
