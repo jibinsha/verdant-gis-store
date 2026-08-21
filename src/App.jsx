@@ -7906,21 +7906,406 @@ function DatasetRoute() {
    REMOTE DATASET PAGE
 ========================================================= */
 
-function DatasetPageRemote({
-  d,
-}) {
+function DatasetPageRemote({ d }) {
   /*
-   * Product pages use the lightweight thumbnail only.
-   * Interactive GeoJSON remains available exclusively in Map Explorer.
-   * This prevents large preview files from delaying every dataset page.
+   * =========================================================
+   * DYNAMIC SEO FOR INDIVIDUAL GIS DATASET PAGES
+   * =========================================================
    */
+
+  useEffect(() => {
+    const siteName = "Verdant GIS";
+
+    const datasetTitle =
+      d.title || "GIS Dataset";
+
+    const category =
+      d.category || "GIS Data";
+
+    const location =
+      d.location ||
+      d.coverage ||
+      "India";
+
+    /*
+     * SEO title
+     */
+    const seoTitle =
+      `${datasetTitle} | GIS Data, Shapefile & Geospatial Dataset | ${siteName}`;
+
+    /*
+     * SEO description
+     */
+    const seoDescription =
+      d.description ||
+      `${datasetTitle} is a ${category} geospatial dataset covering ${location}. Suitable for GIS mapping, spatial analysis, research, planning, QGIS, ArcGIS and Python.`;
+
+    /*
+     * Keep description within a good search-result length.
+     */
+    const description =
+      seoDescription
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 160);
+
+    /*
+     * Canonical URL
+     */
+    const canonicalUrl =
+      `https://verdantgis.com/dataset/${d.slug}`;
+
+    /*
+     * ---------------------------------------------------------
+     * PAGE TITLE
+     * ---------------------------------------------------------
+     */
+
+    document.title = seoTitle;
+
+    /*
+     * ---------------------------------------------------------
+     * HELPER FOR META TAGS
+     * ---------------------------------------------------------
+     */
+
+    const setMeta = (
+      attribute,
+      key,
+      content
+    ) => {
+      if (!content) return;
+
+      let element =
+        document.head.querySelector(
+          `meta[${attribute}="${key}"]`
+        );
+
+      if (!element) {
+        element =
+          document.createElement("meta");
+
+        element.setAttribute(
+          attribute,
+          key
+        );
+
+        document.head.appendChild(
+          element
+        );
+      }
+
+      element.setAttribute(
+        "content",
+        content
+      );
+    };
+
+    /*
+     * ---------------------------------------------------------
+     * META DESCRIPTION
+     * ---------------------------------------------------------
+     */
+
+    setMeta(
+      "name",
+      "description",
+      description
+    );
+
+    /*
+     * ---------------------------------------------------------
+     * ROBOTS
+     * ---------------------------------------------------------
+     */
+
+    setMeta(
+      "name",
+      "robots",
+      "index, follow"
+    );
+
+    /*
+     * ---------------------------------------------------------
+     * CANONICAL
+     * ---------------------------------------------------------
+     */
+
+    let canonical =
+      document.head.querySelector(
+        'link[rel="canonical"]'
+      );
+
+    if (!canonical) {
+      canonical =
+        document.createElement("link");
+
+      canonical.setAttribute(
+        "rel",
+        "canonical"
+      );
+
+      document.head.appendChild(
+        canonical
+      );
+    }
+
+    canonical.setAttribute(
+      "href",
+      canonicalUrl
+    );
+
+    /*
+     * ---------------------------------------------------------
+     * OPEN GRAPH
+     * ---------------------------------------------------------
+     */
+
+    setMeta(
+      "property",
+      "og:title",
+      seoTitle
+    );
+
+    setMeta(
+      "property",
+      "og:description",
+      description
+    );
+
+    setMeta(
+      "property",
+      "og:url",
+      canonicalUrl
+    );
+
+    setMeta(
+      "property",
+      "og:type",
+      "website"
+    );
+
+    setMeta(
+      "property",
+      "og:site_name",
+      siteName
+    );
+
+    if (d.thumbnail_url) {
+      setMeta(
+        "property",
+        "og:image",
+        d.thumbnail_url
+      );
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * TWITTER / X
+     * ---------------------------------------------------------
+     */
+
+    setMeta(
+      "name",
+      "twitter:card",
+      "summary_large_image"
+    );
+
+    setMeta(
+      "name",
+      "twitter:title",
+      seoTitle
+    );
+
+    setMeta(
+      "name",
+      "twitter:description",
+      description
+    );
+
+    if (d.thumbnail_url) {
+      setMeta(
+        "name",
+        "twitter:image",
+        d.thumbnail_url
+      );
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * CLEANUP
+     * ---------------------------------------------------------
+     */
+
+    return () => {
+      const schema =
+        document.getElementById(
+          "dataset-schema"
+        );
+
+      if (schema) {
+        schema.remove();
+      }
+    };
+  }, [
+    d.title,
+    d.description,
+    d.slug,
+    d.category,
+    d.location,
+    d.coverage,
+    d.thumbnail_url,
+  ]);
+
+  /*
+   * =========================================================
+   * DATASET STRUCTURED DATA
+   * =========================================================
+   */
+
+  useEffect(() => {
+    const existing =
+      document.getElementById(
+        "dataset-schema"
+      );
+
+    if (existing) {
+      existing.remove();
+    }
+
+    const keywords = [
+      "GIS data",
+      "GIS dataset",
+      "geospatial data",
+      "shapefile",
+      "India GIS data",
+      "India shapefile",
+      "geospatial dataset",
+      "spatial data",
+      "remote sensing data",
+      "GIS mapping",
+      "QGIS data",
+      "ArcGIS data",
+      d.category,
+      d.location,
+      d.coverage,
+    ].filter(Boolean);
+
+    const schema = {
+      "@context":
+        "https://schema.org",
+
+      "@type": "Dataset",
+
+      "name":
+        d.title ||
+        "GIS Dataset",
+
+      "description":
+        d.description ||
+        `${d.title} GIS dataset available from Verdant GIS.`,
+
+      "url":
+        `https://verdantgis.com/dataset/${d.slug}`,
+
+      "keywords":
+        keywords.join(", "),
+
+      "spatialCoverage":
+        d.coverage ||
+        d.location ||
+        "India",
+
+      "creator": {
+        "@type":
+          "Organization",
+
+        "name":
+          "Verdant GIS",
+
+        "url":
+          "https://verdantgis.com/"
+      },
+
+      "publisher": {
+        "@type":
+          "Organization",
+
+        "name":
+          "Verdant GIS",
+
+        "url":
+          "https://verdantgis.com/"
+      },
+
+      "distribution":
+        (d.formats || []).map(
+          (format) => ({
+            "@type":
+              "DataDownload",
+
+            "encodingFormat":
+              format,
+
+            "contentUrl":
+              `https://verdantgis.com/dataset/${d.slug}`
+          })
+        )
+    };
+
+    const script =
+      document.createElement(
+        "script"
+      );
+
+    script.id =
+      "dataset-schema";
+
+    script.type =
+      "application/ld+json";
+
+    script.textContent =
+      JSON.stringify(schema);
+
+    document.head.appendChild(
+      script
+    );
+
+    return () => {
+      const element =
+        document.getElementById(
+          "dataset-schema"
+        );
+
+      if (element) {
+        element.remove();
+      }
+    };
+  }, [
+    d.title,
+    d.description,
+    d.slug,
+    d.category,
+    d.location,
+    d.coverage,
+    d.formats,
+  ]);
+
+  /*
+   * =========================================================
+   * PRODUCT PAGE UI
+   * =========================================================
+   */
+
   return (
     <>
       <Nav />
 
       <main className="detail-page">
+
         <div className="breadcrumbs">
-          <Link to="/store">
+
+          <Link to="/categories">
             GIS Data Catalogue
           </Link>
 
@@ -7936,41 +8321,68 @@ function DatasetPageRemote({
           <b>
             {d.title}
           </b>
+
         </div>
 
+
         <div className="detail-grid">
+
           <div>
+
             <div className="large-map">
+
               {d.thumbnail_url ? (
+
                 <DatasetPreviewImage
                   url={d.thumbnail_url}
                   title={d.title}
                 />
+
               ) : (
+
                 <div className="dataset-preview-placeholder">
+
                   <Map size={42} />
-                  <strong>{d.title || "GIS dataset"}</strong>
-                  <span>Interactive preview available in Map Explorer.</span>
+
+                  <strong>
+                    {d.title ||
+                      "GIS dataset"}
+                  </strong>
+
+                  <span>
+                    Interactive preview
+                    available in Map Explorer.
+                  </span>
+
                 </div>
+
               )}
+
             </div>
+
           </div>
 
+
           <div className="detail-copy">
+
             <span className="tag">
               {d.category ||
                 "GIS Data"}
             </span>
 
+
             <h1>
               {d.title}
             </h1>
 
+
             <p className="lead">
               {d.description}
             </p>
-            
+
+
             <div className="price">
+
               {d.price === 0
                 ? "FREE"
                 : `₹${d.price.toLocaleString(
@@ -7982,25 +8394,32 @@ function DatasetPageRemote({
                   one-time
                 </small>
               )}
+
             </div>
 
+
             <div className="format-list">
-              {d.formats.map(
+
+              {(d.formats || []).map(
                 (f) => (
-                  <span
-                    key={f}
-                  >
+
+                  <span key={f}>
                     {f}
                   </span>
+
                 )
               )}
+
             </div>
+
 
             <AddToCartButton
               dataset={d}
             />
 
+
             <div className="purchase-note">
+
               <ShieldCheck
                 size={17}
               />
@@ -8010,12 +8429,18 @@ function DatasetPageRemote({
                 Instant access after
                 purchase
               </span>
+
             </div>
+
           </div>
+
         </div>
 
+
         <section className="data-info">
+
           <div>
+
             <span className="section-kicker">
               DATASET DETAILS
             </span>
@@ -8023,34 +8448,43 @@ function DatasetPageRemote({
             <h2>
               {d.title} — Dataset Details
             </h2>
+
           </div>
 
+
           <div className="info-grid">
+
             <Info
               label="Coverage"
               value={
-                d.coverage
+                d.coverage ||
+                d.location ||
+                "India"
               }
             />
 
             <Info
               label="Features"
               value={
-                d.features
+                d.features ||
+                "—"
               }
             />
 
             <Info
               label="Formats"
-              value={d.formats.join(
-                ", "
-              )}
+              value={
+                (d.formats || []).join(
+                  ", "
+                )
+              }
             />
 
             <Info
               label="Last updated"
               value={
-                d.updated
+                d.updated ||
+                "Recently updated"
               }
             />
 
@@ -8066,8 +8500,11 @@ function DatasetPageRemote({
               label="Compatibility"
               value="QGIS · ArcGIS · Python"
             />
+
           </div>
+
         </section>
+
       </main>
 
       <Footer />
