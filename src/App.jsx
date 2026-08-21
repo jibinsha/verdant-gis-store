@@ -3000,7 +3000,11 @@ function CategoryPage() {
         }
       })
       .catch((err) => {
-        if (active) setError(err.message || "Could not load this category.");
+        if (active) {
+          setError(
+            err.message || "Could not load this category."
+          );
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -3011,12 +3015,68 @@ function CategoryPage() {
     };
   }, [slug]);
 
+  /*
+   * Dynamic SEO metadata
+   * Runs after the category has been identified.
+   */
+  useEffect(() => {
+    if (!category) return;
+
+    const categoryName = category.name;
+
+    document.title =
+      `${categoryName} GIS Data & Shapefiles | Verdant GIS`;
+
+    const description =
+      `Explore ${categoryName} GIS data, shapefiles and geospatial datasets on Verdant GIS. Browse ready-to-use spatial data for GIS mapping, remote sensing, research, agriculture, environmental analysis and spatial applications.`;
+
+    let meta = document.querySelector(
+      'meta[name="description"]'
+    );
+
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute("name", "description");
+      document.head.appendChild(meta);
+    }
+
+    meta.setAttribute("content", description);
+
+    let canonical = document.querySelector(
+      'link[rel="canonical"]'
+    );
+
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
+    }
+
+    canonical.setAttribute(
+      "href",
+      `https://verdantgis.com/categories/${slugifyCategory(
+        categoryName
+      )}/`
+    );
+
+    return () => {
+      // Keep the document clean when navigating between categories
+      document.title =
+        "GIS Data, Shapefiles & Remote Sensing Datasets | Verdant GIS";
+    };
+  }, [category]);
+
   if (loading) {
     return (
       <>
         <Nav />
+
         <main className="simple-page">
-          <LoaderCircle className="spin" size={32} />
+          <LoaderCircle
+            className="spin"
+            size={32}
+          />
+
           <h2>Loading category…</h2>
         </main>
       </>
@@ -3027,21 +3087,36 @@ function CategoryPage() {
     return (
       <>
         <Nav />
+
         <main className="simple-page">
-          <span className="section-kicker">CATEGORY</span>
+          <span className="section-kicker">
+            GIS CATEGORY
+          </span>
+
           <h1>Category not found.</h1>
 
           <div className="empty-state">
             <Layers3 size={36} />
-            <h3>This category is not available.</h3>
+
+            <h3>
+              This category is not available.
+            </h3>
+
             <p>
-              Browse the live categories to find published GIS datasets.
+              Browse the live categories to find
+              published GIS datasets.
             </p>
-            <Link to="/categories" className="primary-btn">
-              Browse categories <ArrowRight size={16} />
+
+            <Link
+              to="/categories"
+              className="primary-btn"
+            >
+              Browse categories{" "}
+              <ArrowRight size={16} />
             </Link>
           </div>
         </main>
+
         <Footer />
       </>
     );
@@ -3052,11 +3127,17 @@ function CategoryPage() {
     id: d.id,
     slug: d.slug,
     category: category.name,
-    location: d.location || d.coverage || "India",
+    location:
+      d.location ||
+      d.coverage ||
+      "India",
     price: Number(d.price || 0),
     formats: d.formats || [],
-    features: d.feature_count || "—",
-    updated: d.updated_label || "Recently updated",
+    features:
+      d.feature_count || "—",
+    updated:
+      d.updated_label ||
+      "Recently updated",
     icon: Map,
   }));
 
@@ -3065,16 +3146,36 @@ function CategoryPage() {
       <Nav />
 
       <main className="category-detail-page">
+
         <div className="category-detail-head">
+
           <div>
+
             <div className="breadcrumbs">
-              <Link to="/categories">Categories</Link>
+              <Link to="/categories">
+                GIS Data Categories
+              </Link>
+
               <span>/</span>
+
               <b>{category.name}</b>
             </div>
 
-            <span className="section-kicker">GIS CATEGORY</span>
-            <h1>{category.name}</h1>
+            <span className="section-kicker">
+              GIS DATA CATEGORY
+            </span>
+
+            <h1>
+              {category.name} GIS Data & Shapefiles
+            </h1>
+
+            <p>
+              Explore {category.name} geospatial
+              datasets, GIS data and shapefiles
+              available through the Verdant GIS
+              catalogue.
+            </p>
+
             <p>
               {mappedDatasets.length}{" "}
               {mappedDatasets.length === 1
@@ -3082,6 +3183,7 @@ function CategoryPage() {
                 : "published datasets"}{" "}
               available in this category.
             </p>
+
           </div>
 
           <Link
@@ -3093,36 +3195,103 @@ function CategoryPage() {
             <Map size={17} />
             Explore on map
           </Link>
+
         </div>
 
-        {error && <div className="upload-status">{error}</div>}
+        {error && (
+          <div className="upload-status">
+            {error}
+          </div>
+        )}
 
         {!mappedDatasets.length ? (
           <div className="empty-state">
+
             <Database size={36} />
-            <h3>No published datasets in this category</h3>
+
+            <h3>
+              No published datasets in this category
+            </h3>
+
             <p>
-              Once a dataset is published with this category, it will appear
-              here automatically.
+              Once a dataset is published with this
+              category, it will appear here
+              automatically.
             </p>
-            <Link to="/store" className="primary-btn">
-              Browse all data <ArrowRight size={16} />
+
+            <Link
+              to="/store"
+              className="primary-btn"
+            >
+              Browse all data{" "}
+              <ArrowRight size={16} />
             </Link>
+
           </div>
         ) : (
-          <div className="dataset-grid">
-            {mappedDatasets.map((d) => (
-              <DatasetCard d={d} key={d.id} />
-            ))}
-          </div>
+          <>
+            <div className="dataset-grid">
+              {mappedDatasets.map((d) => (
+                <DatasetCard
+                  d={d}
+                  key={d.id}
+                />
+              ))}
+            </div>
+
+            {/* SEO supporting content */}
+            <section className="section">
+
+              <div className="page-hero">
+
+                <span className="section-kicker">
+                  {category.name.toUpperCase()} GIS DATA
+                </span>
+
+                <h2>
+                  {category.name} geospatial data
+                  for GIS and remote sensing
+                </h2>
+
+                <p>
+                  Browse {category.name} GIS data
+                  and geospatial datasets available
+                  through Verdant GIS. These datasets
+                  can support GIS mapping, spatial
+                  analysis, remote sensing,
+                  agriculture, environmental
+                  research, planning and other
+                  geospatial applications.
+                </p>
+
+                <p>
+                  Available data may include
+                  vector datasets, shapefiles,
+                  GeoJSON and other spatial formats,
+                  depending on the datasets published
+                  in this category.
+                </p>
+
+                <p>
+                  Explore the available datasets
+                  above to view their coverage,
+                  formats, features and other
+                  information before using them in
+                  your GIS or remote sensing workflow.
+                </p>
+
+              </div>
+
+            </section>
+          </>
         )}
+
       </main>
 
       <Footer />
     </>
   );
 }
-
 /* =========================================================
    EXPLORE
 ========================================================= */
