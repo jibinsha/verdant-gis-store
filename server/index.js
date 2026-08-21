@@ -516,12 +516,33 @@ async function fulfilCapturedPayment({
     );
   }
 
-  if (order.status === "paid") {
-    return {
-      order,
-      alreadyPaid: true
-    };
+if (order.status === "paid") {
+  const {
+    data: items,
+    error: itemsError
+  } = await supabaseAdmin
+    .from("order_items")
+    .select("dataset_id, datasets(*)")
+    .eq("order_id", order.id);
+
+  if (itemsError) {
+    throw itemsError;
   }
+
+  await grantDownloads(
+    order.id,
+    order.user_id,
+    (items || [])
+      .map((x) => x.datasets)
+      .filter(Boolean)
+  );
+
+  return {
+    order,
+    alreadyPaid: true,
+    downloadsGranted: true
+  };
+}
 
   const payment =
     await razorpay.payments.fetch(
