@@ -1,28 +1,120 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset
+  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+>
 
   <url>
     <loc>https://verdantgis.com/</loc>
+    
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
   </url>
-
   <url>
     <loc>https://verdantgis.com/explore</loc>
+    
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
-
   <url>
     <loc>https://verdantgis.com/map-explorer</loc>
+    
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
-
   <url>
     <loc>https://verdantgis.com/categories</loc>
+    
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
-
   <url>
     <loc>https://verdantgis.com/about</loc>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>
-
   <url>
     <loc>https://verdantgis.com/contact</loc>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>
-
+  <url>
+    <loc>https://verdantgis.com/categories/administrative</loc>
+    
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://verdantgis.com/categories/agriculture</loc>
+    
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://verdantgis.com/categories/water-resources</loc>
+    
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://verdantgis.com/categories/remote-sensing</loc>
+    
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://verdantgis.com/categories/land-use-land-cover</loc>
+    
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://verdantgis.com/categories/environmental</loc>
+    
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://verdantgis.com/categories/transportation</loc>
+    
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://verdantgis.com/categories/soil</loc>
+    
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://verdantgis.com/categories/elevation</loc>
+    
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://verdantgis.com/categories/climate</loc>
+    
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://verdantgis.com/dataset/india-major-river-network-gis-dataset-msywts8a</loc>
+    <lastmod>2026-08-18T17:01:54.448Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://verdantgis.com/dataset/kerala-administrative-boundary-gis-dataset-msyv4t1g</loc>
+    <lastmod>2026-08-18T16:14:36.406Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://verdantgis.com/dataset/india-administrative-transportation-gis-dataset-msyu9ba5</loc>
+    <lastmod>2026-08-18T15:50:12.616Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
 </urlset>
