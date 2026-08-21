@@ -7969,13 +7969,7 @@ function DatasetPageRemote({
             <p className="lead">
               {d.description}
             </p>
-            <p className="dataset-seo-intro">
-              This {d.category || "GIS"} dataset is available
-              for GIS mapping, spatial analysis, remote sensing,
-              research, planning and other geospatial applications.
-              The dataset covers {d.coverage || d.location || "India"}
-              and can be used with common GIS tools and workflows.
-            </p>
+            
             <div className="price">
               {d.price === 0
                 ? "FREE"
