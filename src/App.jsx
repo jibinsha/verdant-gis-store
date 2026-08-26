@@ -33,7 +33,8 @@ import {
   Send,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-
+import StudioPage from "./studio/StudioPage";
+import "./studio/studio.css";
 import {
   supabase,
   supabaseReady,
@@ -7373,7 +7374,10 @@ export default function App() {
         path="/explore"
         element={<Explore />}
       />
-
+      <Route
+        path="/studio"
+        element={<StudioPage />}
+      />
       <Route
         path="/contact"
         element={<ContactPage />}
