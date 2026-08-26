@@ -1,4 +1,4 @@
-const DEFAULT_API_PATH = "/api/studio/boundaries/resolve";
+const DEFAULT_API_PATH = "https://verdant-gis-api.onrender.com/api/studio/boundaries/resolve";
 
 function getBoundaryApiUrl() {
   const configured = import.meta?.env?.VITE_STUDIO_BOUNDARY_API;
