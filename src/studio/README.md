@@ -1,77 +1,120 @@
-# Verdant GIS Studio V2
+# Verdant GIS Studio V22
 
-V2 is the map-making foundation for Verdant GIS. It is intentionally focused on turning uploaded coordinate data into usable GIS maps before the final cartographic layout module is added from the user's example.
+This version separates the **location-map workflow** from the **IDW interpolation workflow** and prepares the Studio for permanent backend administrative boundaries.
 
-## Included
+## 1. Location map
 
-- CSV coordinate upload
-- Flexible latitude/longitude column detection
-- Decimal degree coordinates
-- N/S/E/W hemisphere coordinates
-- DMS coordinates such as `32°06'36.65"N`
-- DMS coordinates with spaces such as `32 06 36.65 N`
-- `lat`, `latitude`, `GPS_Lat`, `y`, `lon`, `lng`, `longitude`, `GPS_Long`, `x` and related naming variants
-- Coordinate validation and invalid-row handling
-- Automatic zoom to uploaded locations
-- Location map with visible point symbols
-- Numeric-field detection
-- IDW interpolation using Turf
-- Square interpolation grid displayed as a continuous colored surface
-- Optional observation points over the interpolation
-- Basic blue-to-red interpolation color ramp
-- PNG map-canvas export foundation
-- Modular architecture ready for final map composition/layout
+When `Location map` is selected:
 
-## Install
+- only the uploaded sampling points are drawn;
+- no previous IDW surface is retained;
+- the map automatically fits the study area;
+- `Open location map layout` opens an A4 landscape location map.
 
-```bash
-npm install maplibre-gl @turf/interpolate papaparse lucide-react
+The location layout contains points only in the main map. It does **not** display an interpolation surface.
+
+## 2. IDW interpolation
+
+When `IDW interpolation` is selected:
+
+- choose a numeric field;
+- choose cell size and IDW power;
+- run the interpolation;
+- the IDW surface immediately appears in the Studio map canvas;
+- sampling points remain visible above the surface;
+- the interpolation extent is based on the detected study boundary when available;
+- `Create map` opens the A4 landscape interpolation layout.
+
+The publication interpolation map contains:
+
+- IDW surface;
+- sampling points;
+- study boundary;
+- coordinate grid and degree labels;
+- north arrow;
+- scale bar;
+- value legend;
+- title, subtitle and source text.
+
+## 3. Permanent backend boundary architecture
+
+The customer should **not** upload the country's administrative datasets.
+
+Keep four permanent server datasets:
+
+```text
+server/gis/boundaries/
+├── world.geojson
+├── states.geojson
+├── districts.geojson
+└── villages.geojson
 ```
 
-If these packages are already in the Verdant GIS project, do not install them again.
+`world.geojson` contains countries. `states.geojson` contains the Indian states. `districts.geojson` contains all Indian districts. `villages.geojson` contains the complete Indian village/local-area dataset.
 
-## Add to App.jsx
+The Studio calls:
 
-```jsx
-import StudioPage from "./studio/StudioPage";
-
-<Route path="/studio" element={<StudioPage />} />
+```text
+POST /api/studio/boundaries/resolve
 ```
 
-Import the stylesheet wherever the existing Studio stylesheet is imported:
+with the uploaded CSV coordinates. The backend returns the matching country/state/district/village features as small GeoJSON FeatureCollections.
 
-```jsx
-import "./studio/studio.css";
+See `backend-boundaries/README.md` and `backend-boundaries/server-route-example.js`.
+
+## 4. Customer custom boundary
+
+The left panel now treats boundary upload as **custom boundary upload only**. It accepts:
+
+- `.geojson`
+- `.json`
+- `.zip` shapefile
+
+This is used when the customer's study boundary is not available in the four permanent datasets.
+
+## 5. A4 layout
+
+The page is 1123 × 794 SVG units, matching an A4 landscape aspect ratio. The left inset column contains the detected country and state. The main panel uses the detected study feature and keeps the coordinate labels around the map frame in a publication-style presentation.
+
+Exports:
+
+- SVG
+- PNG at 3369 × 2382 pixels
+
+## 6. GIS Store V21 integration
+
+V22 is the Studio integration for GIS Store V21. The existing Store catalogue, authentication, Supabase, payment, order and download workflows are intentionally untouched.
+
+The Studio-only backend additions are:
+
+```text
+server/gis/studioBoundaries.js
+server/index.js
 ```
 
-## V2 workflow
+The Express route is:
 
-1. Open `/studio`.
-2. Upload a CSV containing coordinates.
-3. The Studio detects coordinate columns and parses coordinate formats.
-4. A location map is created and the map automatically fits the uploaded points.
-5. Select `IDW interpolation` when a numeric variable is available.
-6. Choose the variable, cell size and IDW power.
-7. Run interpolation.
-8. The interpolation grid is rendered as a colored surface and the map zooms to the result.
-9. Export Map currently exports the MapLibre canvas where the basemap permits canvas export.
+```text
+POST /api/studio/boundaries/resolve
+```
 
-## Planned V3 after map-layout example
+For local development, the Studio automatically uses:
 
-The final cartographic composer should be built after the supplied map-layout reference. It can then add:
+```text
+http://localhost:8787/api/studio/boundaries/resolve
+```
 
-- title and subtitle
-- legend
-- north arrow
-- scale bar
-- neatline
-- coordinate grid/graticule
-- study-area inset/location map
-- logo/branding
-- data/source/author/date text
-- paper size and orientation
-- margins and map frame
-- print-quality PNG/PDF export
-- saved map projects
+when `VITE_STUDIO_BOUNDARY_API` is not configured. For another deployment, set `VITE_STUDIO_BOUNDARY_API` to the backend endpoint or proxy `/api` to the existing Express server.
 
-Additional analysis modules can then be added without changing the core upload/map architecture: point density, buffer, proximity, thematic/proportional symbols, classification, contours/isolines, clipping, and other GIS operations.
+The permanent datasets remain:
+
+```text
+server/gis/boundaries/
+├── world.geojson
+├── states.geojson
+├── districts.geojson
+└── villages.geojson
+```
+
+The backend caches these files after first use and returns only the matched administrative features needed by the Studio.
+

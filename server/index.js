@@ -4,6 +4,7 @@ import cors from "cors";
 import crypto from "node:crypto";
 import Razorpay from "razorpay";
 import { createClient } from "@supabase/supabase-js";
+import { resolveStudioBoundaries } from "./gis/studioBoundaries.js";
 
 const app = express();
 const PORT = Number(process.env.PORT || 8787);
@@ -237,6 +238,43 @@ app.use(
     limit: "100kb"
   })
 );
+
+/* ============================================================
+   GIS STUDIO / PERMANENT BOUNDARIES
+
+   This route is isolated to the GIS Studio. It reads the permanent
+   boundary library from server/gis/boundaries and returns only the
+   country/state/district/village features relevant to the uploaded points.
+   It does not touch the Store catalogue, payments, orders, or downloads.
+   ============================================================ */
+
+app.post("/api/studio/boundaries/resolve", (req, res) => {
+  try {
+    const points = Array.isArray(req.body?.points) ? req.body.points : [];
+
+    if (!points.length) {
+      return res.status(400).json({
+        error: "At least one coordinate point is required."
+      });
+    }
+
+    if (points.length > 5000) {
+      return res.status(400).json({
+        error: "A maximum of 5000 points can be resolved at once."
+      });
+    }
+
+    const result = resolveStudioBoundaries(points);
+
+    return res.json(result);
+  } catch (error) {
+    console.error("[Verdant GIS Studio] Boundary resolution failed:", error);
+
+    return res.status(500).json({
+      error: "Could not resolve the permanent GIS Studio boundaries."
+    });
+  }
+});
 
 /* ============================================================
    HEALTH

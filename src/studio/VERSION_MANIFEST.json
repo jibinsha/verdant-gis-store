@@ -1,0 +1,37 @@
+{
+  "version": "V22",
+  "purpose": "GIS Store V21 Studio integration: location maps, IDW interpolation, permanent backend boundary resolution and A4 landscape publication layouts",
+  "reference_version": "V4.2",
+  "files": [
+    "README.md",
+    "StudioAnalysis.jsx",
+    "StudioBoundaryUpload.jsx",
+    "StudioLayers.jsx",
+    "StudioLayout.jsx",
+    "StudioMap.jsx",
+    "StudioPage.jsx",
+    "StudioUpload.jsx",
+    "analysis/idw.js",
+    "backend-boundaries/README.md",
+    "backend-boundaries/boundaryResolver.js",
+    "backend-boundaries/server-route-example.js",
+    "boundaryApi.js",
+    "package.studio-deps.json",
+    "server/gis/boundaries/README.txt",
+    "spatial.js",
+    "studio.css"
+  ],
+  "syntax_checked": true,
+  "notes": [
+    "Studio-only integration for GIS Store V21; unrelated Store, catalogue, authentication, payment and download code is unchanged.",
+    "Location-map mode clears any previous IDW result, so interpolation cannot leak into a location-map layout.",
+    "IDW remains visible in the main Studio canvas immediately after processing and is clipped to the selected study boundary.",
+    "The backend resolves permanent country, state, district and village boundaries from server/gis/boundaries without requiring customers to upload those datasets.",
+    "The customer boundary uploader is reserved for a custom GeoJSON or ZIP shapefile boundary.",
+    "The backend returns India state features for the country inset and state district features for the state inset, allowing publication-style locator maps.",
+    "A4 landscape layout keeps location maps points-only and IDW layouts interpolation-plus-points, with publication-style coordinate grid, north arrow, scale bar and editable sampling legend.",
+    "Coordinate grid uses three interior longitude/latitude labels; longitude labels sit above/below the main frame and latitude labels sit vertically outside the left/right frame.",
+    "Studio map redraw/zoom is synchronized with layer add/remove/selection without requiring a page refresh."
+    "The permanent boundary API is isolated at /api/studio/boundaries/resolve."
+  ]
+}

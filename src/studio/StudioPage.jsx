@@ -1,21 +1,165 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Download, MapPinned } from "lucide-react";
 import StudioUpload from "./StudioUpload";
 import StudioMap from "./StudioMap";
 import StudioAnalysis from "./StudioAnalysis";
 import StudioLayers from "./StudioLayers";
+import StudioBoundaryUpload from "./StudioBoundaryUpload";
+import StudioLayout from "./StudioLayout";
+import { detectBoundaryFeature, detectBoundaryForStudy } from "./spatial";
+import { getPermanentBoundaryResolution } from "./boundaryApi";
 
 export default function StudioPage() {
   const [layers, setLayers] = useState([]);
+  const [boundaries, setBoundaries] = useState([]);
+  const [recommendedBoundaryLevel, setRecommendedBoundaryLevel] = useState(null);
   const [activeLayerId, setActiveLayerId] = useState(null);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [mapMode, setMapMode] = useState("location");
+  const [layoutOpen, setLayoutOpen] = useState(false);
 
   const activeLayer = useMemo(
     () => layers.find((layer) => layer.id === activeLayerId) || null,
     [layers, activeLayerId]
   );
+
+  const detected = useMemo(() => {
+    if (!activeLayer) return {};
+
+    const find = (level) => {
+      const source = boundaries.filter((boundary) => boundary.level === level);
+
+      for (const boundary of source) {
+        const feature = detectBoundaryFeature(
+          boundary,
+          activeLayer.geojson?.features || []
+        );
+
+        if (feature) {
+          return { boundary, feature };
+        }
+      }
+
+      return null;
+    };
+
+    return {
+      country: find("country"),
+      state: find("state"),
+      district: find("district"),
+      village: find("village"),
+      custom: find("custom"),
+
+      countryBoundary: find("country")?.boundary || null,
+      countryFeature: find("country")?.feature || null,
+      stateBoundary: find("state")?.boundary || null,
+      stateFeature: find("state")?.feature || null,
+      districtBoundary: find("district")?.boundary || null,
+      districtFeature: find("district")?.feature || null,
+      villageBoundary: find("village")?.boundary || null,
+      villageFeature: find("village")?.feature || null,
+      customBoundary: find("custom")?.boundary || null,
+      customFeature: find("custom")?.feature || null,
+      countryInsetGeojson: find("country")?.boundary?.insetGeojson || null,
+      stateInsetGeojson: find("state")?.boundary?.insetGeojson || null
+    };
+  }, [activeLayer, boundaries]);
+
+  const mainDetected = useMemo(() => {
+    if (!activeLayer) return null;
+
+    // A customer-uploaded custom boundary always takes precedence.
+    if (detected.custom?.boundary && detected.custom?.feature) {
+      return {
+        ...detected.custom,
+        level: "custom"
+      };
+    }
+
+    // The backend recommends the smallest permanent boundary that contains
+    // the complete point set. This avoids selecting a single district or
+    // village when the uploaded points span several adjacent features.
+    if (recommendedBoundaryLevel) {
+      const recommended = detected[recommendedBoundaryLevel];
+      if (recommended?.boundary && recommended?.feature) {
+        return {
+          ...recommended,
+          level: recommendedBoundaryLevel
+        };
+      }
+    }
+
+    const levels = [
+      ["village", detected.village],
+      ["district", detected.district],
+      ["state", detected.state],
+      ["country", detected.country]
+    ];
+
+    for (const [level, item] of levels) {
+      if (item?.boundary && item?.feature) {
+        return {
+          ...item,
+          level
+        };
+      }
+    }
+
+    return null;
+  }, [activeLayer, detected, recommendedBoundaryLevel]);
+
+  useEffect(() => {
+    if (!activeLayer) {
+      setRecommendedBoundaryLevel(null);
+      return;
+    }
+
+    let cancelled = false;
+    const pointFeatures = activeLayer.geojson?.features || [];
+
+    // Keep a customer-uploaded custom boundary while replacing only the
+    // permanent backend boundary results for the newly active point layer.
+    setBoundaries((current) =>
+      current.filter((boundary) => boundary.sourceType === "upload")
+    );
+    setRecommendedBoundaryLevel(null);
+
+    getPermanentBoundaryResolution(pointFeatures)
+      .then((resolution) => {
+        if (cancelled) return;
+
+        const backend = (resolution?.boundaries || []).map((boundary) => ({
+          ...boundary,
+          sourceType: "backend"
+        }));
+
+        setRecommendedBoundaryLevel(
+          resolution?.recommendedLevel || null
+        );
+
+        setBoundaries((current) => {
+          const custom = current.filter(
+            (boundary) => boundary.sourceType === "upload"
+          );
+          return [...custom, ...backend];
+        });
+      })
+      .catch((error) => {
+        if (cancelled) return;
+
+        console.warn(
+          "[Verdant GIS Studio] Permanent boundary service unavailable:",
+          error?.message || error
+        );
+
+        setRecommendedBoundaryLevel(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeLayer]);
 
   function addLayer(layer) {
     setLayers((current) => [...current, layer]);
@@ -26,29 +170,26 @@ export default function StudioPage() {
 
   function removeLayer(id) {
     setLayers((current) => current.filter((layer) => layer.id !== id));
-    if (activeLayerId === id) setActiveLayerId(null);
+
+    if (activeLayerId === id) {
+      setActiveLayerId(null);
+    }
+
     setAnalysisResult(null);
     setMapMode("location");
   }
 
-  function exportMap() {
-    const canvas = document.querySelector(".studio-map canvas");
+  function addBoundary(boundary) {
+    setBoundaries((current) => [...current, boundary]);
+  }
 
-    if (!canvas) {
-      window.alert("The map is not ready yet.");
+  function openLayout() {
+    if (!activeLayer) {
+      window.alert("Upload a coordinate CSV first.");
       return;
     }
 
-    try {
-      const link = document.createElement("a");
-      link.download = `verdant-gis-${mapMode}-map.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-    } catch (error) {
-      window.alert(
-        "Map export was blocked by the basemap provider. The map can still be exported after a print/layout module is added."
-      );
-    }
+    setLayoutOpen(true);
   }
 
   return (
@@ -58,14 +199,18 @@ export default function StudioPage() {
           <span className="section-kicker">VERDANT GIS</span>
           <h1>GIS Studio</h1>
           <p>
-            Upload your coordinates, create location maps and generate spatial analyses from your own data.
+            Upload your coordinates, create location maps and generate spatial
+            analyses from your own data.
           </p>
         </div>
 
         <div className="studio-header-actions">
-          <Link to="/" className="secondary-btn">Exit Studio</Link>
-          <button className="primary-btn" type="button" onClick={exportMap}>
-            <Download size={17} /> Export Map
+          <Link to="/" className="secondary-btn">
+            Exit Studio
+          </Link>
+
+          <button className="primary-btn" type="button" onClick={openLayout}>
+            <Download size={17} /> Map Layout
           </button>
         </div>
       </header>
@@ -75,13 +220,22 @@ export default function StudioPage() {
           <MapPinned size={16} />
           <strong>
             {mapMode === "interpolation"
-              ? `IDW interpolation${analysisResult?.valueField ? ` — ${analysisResult.valueField}` : ""}`
+              ? `IDW interpolation${
+                  analysisResult?.valueField
+                    ? ` — ${analysisResult.valueField}`
+                    : ""
+                }`
               : "Location map"}
           </strong>
         </div>
+
         <span>
           {activeLayer
-            ? `${activeLayer.featureCount || activeLayer.geojson?.features?.length || 0} valid locations`
+            ? `${
+                activeLayer.featureCount ||
+                activeLayer.geojson?.features?.length ||
+                0
+              } valid locations`
             : "Upload CSV to begin"}
         </span>
       </div>
@@ -89,6 +243,9 @@ export default function StudioPage() {
       <div className="studio-layout">
         <aside className="studio-sidebar">
           <StudioUpload onAddLayer={addLayer} />
+
+          <StudioBoundaryUpload onAddBoundary={addBoundary} />
+
           <StudioLayers
             layers={layers}
             activeLayerId={activeLayerId}
@@ -99,25 +256,119 @@ export default function StudioPage() {
             }}
             onRemove={removeLayer}
           />
+
+          {boundaries.length > 0 && (
+            <section className="studio-panel">
+              <div className="studio-panel-heading">
+                <div>
+                  <span className="section-kicker">BOUNDARY LIBRARY</span>
+                  <h2>Loaded</h2>
+                </div>
+              </div>
+
+              {boundaries.map((boundary) => (
+                <div className="studio-boundary-row" key={boundary.id}>
+                  <strong>{boundary.name}</strong>
+                  <span>
+                    {boundary.level} ·{" "}
+                    {boundary.geojson?.features?.length || 0} features
+                  </span>
+                </div>
+              ))}
+            </section>
+          )}
         </aside>
 
         <main className="studio-map-area">
           <StudioMap
+            key={activeLayerId || "studio-empty"}
             layers={layers}
+            boundaries={boundaries}
             analysisResult={analysisResult}
             mapMode={mapMode}
-            valueField={analysisResult?.valueField || ""}
+            selectedBoundaryId={mainDetected?.boundary?.id || ""}
+            selectedBoundaryFeature={mainDetected?.feature || null}
+            activeLayerId={activeLayerId}
           />
         </main>
 
         <aside className="studio-sidebar">
           <StudioAnalysis
             activeLayer={activeLayer}
+            detectedBoundary={mainDetected}
+            analysisResult={analysisResult}
             onResult={setAnalysisResult}
             onMapMode={setMapMode}
+            onOpenLayout={openLayout}
           />
+
+          {activeLayer && (
+            <section className="studio-panel">
+              <div className="studio-panel-heading">
+                <div>
+                  <span className="section-kicker">AUTO LOCATION</span>
+                  <h2>Study area</h2>
+                </div>
+              </div>
+
+              {mainDetected?.boundary ? (
+                <>
+                  <p className="studio-muted">
+                    The point dataset has been spatially matched to the
+                    uploaded boundary library.
+                  </p>
+
+                  {detected.countryBoundary && (
+                    <div className="studio-detected">
+                      Country: {detected.countryBoundary.name}
+                    </div>
+                  )}
+
+                  {detected.stateBoundary && (
+                    <div className="studio-detected">
+                      State: {detected.stateBoundary.name}
+                    </div>
+                  )}
+
+                  {detected.districtBoundary && (
+                    <div className="studio-detected">
+                      District: {detected.districtBoundary.name}
+                    </div>
+                  )}
+
+                  {detected.villageBoundary && (
+                    <div className="studio-detected">
+                      Local area: {detected.villageBoundary.name}
+                    </div>
+                  )}
+
+                  {detected.customBoundary && (
+                    <div className="studio-detected">
+                      Custom boundary: {detected.customBoundary.name}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="studio-muted">
+                  {boundaries.length
+                    ? "No matching boundary was found. Check that the permanent backend boundary library is connected or upload a custom boundary."
+                    : "Automatic country, state, district and village boundaries are fetched from the permanent backend library. Upload a custom boundary only when needed."}
+                </p>
+              )}
+            </section>
+          )}
         </aside>
       </div>
+
+      <StudioLayout
+        open={layoutOpen}
+        onClose={() => setLayoutOpen(false)}
+        layers={layers}
+        activeLayer={activeLayer}
+        boundaries={boundaries}
+        detected={{ ...detected, mainFeature: mainDetected?.feature || null }}
+        analysisResult={analysisResult}
+      />
     </div>
   );
 }

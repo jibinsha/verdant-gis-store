@@ -8,17 +8,18 @@ function isNumericField(features, field) {
     .map((feature) => feature.properties?.[field])
     .filter((value) => value !== "" && value !== null && value !== undefined);
 
-  if (!values.length) return false;
-
-  return values.every((value) =>
+  return values.length > 0 && values.every((value) =>
     Number.isFinite(Number(String(value).replace(/,/g, "")))
   );
 }
 
 export default function StudioAnalysis({
   activeLayer,
+  detectedBoundary = null,
+  analysisResult = null,
   onResult,
-  onMapMode
+  onMapMode,
+  onOpenLayout
 }) {
   const [mapType, setMapType] = useState("location");
   const [field, setField] = useState("");
@@ -27,7 +28,6 @@ export default function StudioAnalysis({
 
   const numericFields = useMemo(() => {
     if (!activeLayer) return [];
-
     return (activeLayer.columns || []).filter((column) =>
       isNumericField(activeLayer.geojson?.features || [], column)
     );
@@ -36,6 +36,12 @@ export default function StudioAnalysis({
   function changeMapType(value) {
     setMapType(value);
     onMapMode?.(value);
+
+    // A location map must never inherit an old IDW surface. This was the
+    // cause of interpolation appearing in the location-map layout.
+    if (value === "location") {
+      onResult?.(null);
+    }
   }
 
   function handleIDW() {
@@ -54,23 +60,34 @@ export default function StudioAnalysis({
         geojson: activeLayer.geojson,
         valueField: field,
         cellSize: Number(cellSize),
-        power: Number(power)
+        power: Number(power),
+        boundaryFeature: detectedBoundary?.feature || null
       });
 
-      onResult({
+      const nextResult = {
         type: "idw",
         name: `${activeLayer.name} - IDW interpolation`,
         geojson: result,
         valueField: field,
         cellSize: Number(cellSize),
-        power: Number(power)
-      });
+        power: Number(power),
+        boundaryId: detectedBoundary?.boundary?.id || "",
+        boundaryName: detectedBoundary?.boundary?.name || "",
+        boundaryFeature: detectedBoundary?.feature || null
+      };
 
-      changeMapType("interpolation");
+      onResult?.(nextResult);
+      setMapType("interpolation");
+      onMapMode?.("interpolation");
     } catch (error) {
       window.alert(error.message || "Interpolation failed.");
     }
   }
+
+  const boundaryReady = Boolean(detectedBoundary?.feature);
+  const canCreateMap =
+    mapType === "interpolation" &&
+    analysisResult?.type === "idw";
 
   return (
     <section className="studio-panel">
@@ -83,9 +100,7 @@ export default function StudioAnalysis({
       </div>
 
       {!activeLayer ? (
-        <p className="studio-muted">
-          Upload a coordinate dataset to create a map.
-        </p>
+        <p className="studio-muted">Upload a coordinate dataset to create a map.</p>
       ) : (
         <>
           <label htmlFor="studio-map-type">Map type</label>
@@ -99,12 +114,23 @@ export default function StudioAnalysis({
           </select>
 
           {mapType === "location" ? (
-            <div className="studio-map-type-help">
-              <Layers3 size={16} />
-              <span>
-                Creates a location map from your uploaded coordinates and fits the map to your study area.
-              </span>
-            </div>
+            <>
+              <div className="studio-map-type-help">
+                <Layers3 size={16} />
+                <span>
+                  Shows only the uploaded sampling locations and automatically
+                  fits the study area.
+                </span>
+              </div>
+
+              <button
+                type="button"
+                className="primary-btn studio-run-btn"
+                onClick={onOpenLayout}
+              >
+                Open location map layout
+              </button>
+            </>
           ) : (
             <>
               <label htmlFor="studio-value-field">Numeric variable</label>
@@ -115,9 +141,7 @@ export default function StudioAnalysis({
               >
                 <option value="">Select field</option>
                 {numericFields.map((column) => (
-                  <option key={column} value={column}>
-                    {column}
-                  </option>
+                  <option key={column} value={column}>{column}</option>
                 ))}
               </select>
 
@@ -127,7 +151,15 @@ export default function StudioAnalysis({
                 </p>
               )}
 
-              <label htmlFor="studio-cell-size">Cell size</label>
+              {!boundaryReady && (
+                <p className="studio-warning">
+                  Waiting for the automatic study boundary. Upload a custom
+                  boundary if you do not want to use the permanent boundary
+                  library.
+                </p>
+              )}
+
+              <label htmlFor="studio-cell-size">Cell size (km)</label>
               <input
                 id="studio-cell-size"
                 type="number"
@@ -151,10 +183,27 @@ export default function StudioAnalysis({
                 type="button"
                 className="primary-btn studio-run-btn"
                 onClick={handleIDW}
+                disabled={!numericFields.length || !boundaryReady}
               >
-                <WandSparkles size={17} />
-                Run IDW interpolation
+                <WandSparkles size={17} /> Run IDW interpolation
               </button>
+
+              <button
+                type="button"
+                className="secondary-btn studio-run-btn"
+                onClick={onOpenLayout}
+                disabled={!canCreateMap}
+              >
+                Create map
+              </button>
+
+              <div className="studio-map-type-help studio-analysis-note">
+                <Layers3 size={16} />
+                <span>
+                  The interpolation is clipped to the automatically detected
+                  study boundary or to the customer-uploaded custom boundary.
+                </span>
+              </div>
             </>
           )}
         </>
