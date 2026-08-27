@@ -317,6 +317,9 @@ export default function StudioMap({
   const markersRef = useRef([]);
   const fitListenerRef = useRef(null);
   const fitTimeoutsRef = useRef([]);
+  // Tracks the last explicit layer/boundary focus request so rendering or
+  // automatic boundary updates cannot accidentally repeat the camera move.
+  const lastFocusRequestRef = useRef(null);
 
   function removeMarkers() {
     markersRef.current.forEach((marker) => {
