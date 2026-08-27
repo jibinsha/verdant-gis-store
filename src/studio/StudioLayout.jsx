@@ -509,12 +509,12 @@ function MainMap({
   const plotW = width - 36;
   const plotH = height - plotY - 14;
 
-  // Always derive the publication extent from both the complete boundary and
-  // every CSV point so all sampling locations remain visible.
+  // The extentFeatures decision above is authoritative: point-only when an
+  // unrelated custom boundary is present, otherwise boundary + points.
   const bbox = aspectFitBbox(
     rawBbox,
     plotW / plotH,
-    hasInterpolation ? 0.025 : (focusPoints ? 0.07 : 0.045)
+    hasInterpolation ? 0.025 : 0.045
   );
 
   const project = projectionFor(

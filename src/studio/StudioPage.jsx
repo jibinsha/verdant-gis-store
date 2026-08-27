@@ -395,7 +395,6 @@ export default function StudioPage() {
 
         <main className="studio-map-area">
           <StudioMap
-            key={activeLayerId || "studio-empty"}
             layers={layers}
             boundaries={boundaries}
             analysisResult={analysisResult}

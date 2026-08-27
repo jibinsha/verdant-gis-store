@@ -1,6 +1,6 @@
 {
-  "version": "V25",
-  "purpose": "GIS Store V21 Studio integration: location maps, IDW interpolation, permanent backend boundary resolution and A4 landscape publication layouts",
+  "version": "V26",
+  "purpose": "GIS Store Studio V26: stable MapLibre worker loading, point-first camera fitting, explicit layer focus, custom boundary rendering and A4 publication layout",
   "reference_version": "V4.2",
   "files": [
     "README.md",
@@ -32,13 +32,14 @@
     "The custom boundary remains a visible project layer with its delete control.",
     "The permanent boundary API and existing remove-boundary implementation are unchanged."
   ],
-  "name": "camera-boundary-loading-layer-focus-fix",
+  "name": "camera-boundary-layer-focus-worker-fix",
   "changes": [
-    "CSV initial viewport fits all valid points and is not re-fit when automatic boundary matching completes.",
-    "Project layer cards zoom to their selected point layer; custom boundary cards zoom to the boundary and sampling points.",
-    "Custom boundary is rendered prominently on the Studio map canvas.",
-    "Location layout uses point-only extent when no custom boundary exists.",
-    "Location layout shows custom boundary plus all points when every point is inside; otherwise only the boundary overview is shown.",
-    "Added Fetching auto location loading state in toolbar and study-area panel."
+    "Removed the undefined focusPoints reference that caused the Studio page to crash.",
+    "Separated automatic camera fitting from explicit project-layer/boundary focus actions.",
+    "Project layer clicks now perform a direct camera fit without requiring a remount.",
+    "Automatic boundary loading never changes the CSV point viewport.",
+    "Custom boundary focus includes the boundary and active sampling points.",
+    "Added explicit Vite MapLibre worker URL configuration to prevent the worker from being served as HTML.",
+    "Location layout keeps point-only extent for unrelated custom boundaries and uses boundary + points when all points are inside."
   ]
 }

@@ -1,3 +1,12 @@
+## V26 fixes
+
+- Fixes the `focusPoints is not defined` crash that blanked the Studio.
+- Separates automatic CSV fitting from explicit project-layer and custom-boundary zoom actions.
+- Project layer cards zoom directly to their layer without remounting the map.
+- Automatic boundary matching never changes the CSV camera.
+- Configures the MapLibre worker through Vite so the worker is emitted/loaded as JavaScript instead of receiving the SPA HTML fallback.
+- Keeps the A4 point-first layout logic: unrelated custom boundary = Boundary Overview only; all points inside = boundary + points in the main map.
+
 
 ## V25 fixes
 

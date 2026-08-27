@@ -6,13 +6,19 @@ import {
   NavigationControl,
   ScaleControl,
   AttributionControl,
-  LngLatBounds
+  LngLatBounds,
+  setWorkerUrl
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { featureContainsPoint } from "./spatial";
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 
 const SOURCE_PREFIX = "studio-source-";
 const LAYER_PREFIX = "studio-layer-";
+
+// Vite must emit the MapLibre worker as a real JavaScript module. This avoids
+// the static-host fallback page being returned for /assets/*.mjs.
+setWorkerUrl(maplibreWorkerUrl);
 
 // Key-free public basemaps for the Studio canvas.
 // Sampling points, boundaries and interpolation are rendered above these layers.
@@ -612,11 +618,12 @@ export default function StudioMap({
     focusRequest
   ]);
 
-  // Camera fitting is intentionally separated from rendering. Permanent
-  // boundary detection is asynchronous; when it arrives we must redraw the
-  // boundary without stealing the camera away from the already-correct CSV
-  // point extent. Camera changes happen only for an actual dataset/analysis
-  // change or an explicit layer-focus request.
+  // Camera fitting is deliberately split from rendering.
+  // Boundary-resolution responses are visual data only and must never steal
+  // the viewport from the sampling points. Only an active-layer/map-mode
+  // change or an explicit focus request is allowed to move the camera.
+  const lastFocusRequestRef = useRef(-1);
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -624,61 +631,76 @@ export default function StudioMap({
     const activeLayer = (layers || []).find(
       (layer) => layer?.id === activeLayerId
     );
-    const points = getPointFeatures(
-      activeLayer ? [activeLayer] : []
-    );
-    const uploadedBoundaryFeatures = (boundaries || [])
-      .filter((boundary) => boundary?.sourceType === "upload")
-      .flatMap((boundary) => boundary?.geojson?.features || []);
+    const points = getPointFeatures(activeLayer ? [activeLayer] : []);
 
-    const fitCurrentExtent = () => {
+    const fit = () => {
       if (!mapRef.current || !map.isStyleLoaded()) return;
 
       fitToMapExtent(map, {
         points,
         selectedBoundaryFeature,
-        boundaryFeatures: uploadedBoundaryFeatures,
+        boundaryFeatures: [],
         analysisGeojson:
           mapMode === "interpolation"
             ? analysisResult?.geojson
             : null,
         mapModeForFit: mapMode,
-        focusTarget,
+        focusTarget: null,
         duration: 450
       });
     };
 
-    const scheduleFit = () => {
-      /*
-       * Fit exactly once per explicit camera request/data change.
-       * The previous delayed second fit caused the visible "re-zoom" effect:
-       * the first fit was correct, then the timeout fitted again and made the
-       * viewport appear to jump. Raster tiles do not need a second fit.
-       */
+    if (map.isStyleLoaded()) {
       map.stop();
-      fitCurrentExtent();
+      fit();
+    } else {
+      map.once("load", fit);
+    }
+
+    return () => map.off("load", fit);
+  }, [activeLayerId, mapMode, analysisResult]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (lastFocusRequestRef.current === focusRequest) return;
+    lastFocusRequestRef.current = focusRequest;
+
+    const activeLayer = (layers || []).find(
+      (layer) => layer?.id === activeLayerId
+    );
+    const points = getPointFeatures(activeLayer ? [activeLayer] : []);
+    const uploadedBoundaryFeatures = (boundaries || [])
+      .filter((boundary) => boundary?.sourceType === "upload")
+      .flatMap((boundary) => boundary?.geojson?.features || []);
+
+    const focus = () => {
+      if (!mapRef.current || !map.isStyleLoaded()) return;
+
+      map.stop();
+
+      fitToMapExtent(map, {
+        points,
+        selectedBoundaryFeature,
+        boundaryFeatures: uploadedBoundaryFeatures,
+        analysisGeojson: null,
+        mapModeForFit: "location",
+        focusTarget,
+        duration: 500
+      });
     };
 
     if (map.isStyleLoaded()) {
-      scheduleFit();
-    } else {
-      map.once("load", scheduleFit);
+      // Wait one frame so a newly uploaded/selected layer has been rendered
+      // into the current map before moving the camera.
+      const frame = requestAnimationFrame(focus);
+      return () => cancelAnimationFrame(frame);
     }
 
-    return () => {
-      map.off("load", scheduleFit);
-      fitTimeoutsRef.current.forEach((timeoutId) =>
-        window.clearTimeout(timeoutId)
-      );
-      fitTimeoutsRef.current = [];
-    };
-  }, [
-    activeLayerId,
-    focusRequest,
-    focusTarget,
-    mapMode,
-    analysisResult
-  ]);
+    map.once("load", focus);
+    return () => map.off("load", focus);
+  }, [focusRequest]);
 
   return (
     <div
