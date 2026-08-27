@@ -7362,9 +7362,19 @@ function Footer() {
 /* =========================================================
    APP ROUTES
 ========================================================= */
+function ScrollToTop() {
+  const { pathname } = useLocation();
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
 export default function App() {
   return (
+   <>
+    <ScrollToTop />
     <Routes>
       <Route
         path="/"
@@ -7442,7 +7452,9 @@ export default function App() {
         path="*"
         element={<Home />}
       />
-    </Routes>
+        </Route>
+      </Routes>
+    </>
   );
 }
 
