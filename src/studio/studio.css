@@ -129,3 +129,7 @@
 /* Studio-only basemap switcher */
 .studio-basemap-control button:hover{background:#f2f7f5!important}
 .studio-basemap-control button+button{border-top:1px solid #dce6e1}
+
+.studio-toolbar-status{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}
+.studio-top-warning{display:inline-flex;align-items:center;max-width:min(760px,60vw);padding:7px 12px;border:1px solid #e6c98d;border-radius:8px;background:#fff1d6;color:#8a5612;font-size:12px;line-height:1.35}
+.studio-layer-select strong{display:flex;align-items:center;gap:6px}

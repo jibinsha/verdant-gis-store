@@ -40,6 +40,7 @@ export default function StudioPage() {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [mapMode, setMapMode] = useState("location");
   const [layoutOpen, setLayoutOpen] = useState(false);
+  const [focusRequest, setFocusRequest] = useState(0);
 
   const activeLayer = useMemo(
     () => layers.find((layer) => layer.id === activeLayerId) || null,
@@ -299,7 +300,7 @@ export default function StudioPage() {
           </strong>
         </div>
 
-        <span>
+        <span className="studio-toolbar-status">
           {activeLayer
             ? `${
                 activeLayer.featureCount ||
@@ -307,6 +308,18 @@ export default function StudioPage() {
                 0
               } valid locations`
             : "Upload CSV to begin"}
+
+          {activeLayer &&
+            detected.customBoundary &&
+            customBoundaryStats.total > 0 &&
+            customBoundaryStats.inside <
+              customBoundaryStats.total && (
+              <strong className="studio-top-warning" role="alert">
+                {customBoundaryStats.inside === 0
+                  ? `Warning: none of the ${customBoundaryStats.total} CSV points are inside the custom boundary.`
+                  : `Warning: ${customBoundaryStats.inside} of ${customBoundaryStats.total} CSV points are inside the custom boundary; ${customBoundaryStats.outside} are outside.`}
+              </strong>
+            )}
         </span>
       </div>
 
@@ -324,9 +337,13 @@ export default function StudioPage() {
               setActiveLayerId(id);
               setAnalysisResult(null);
               setMapMode("location");
+              setFocusRequest((value) => value + 1);
             }}
             onRemove={removeLayer}
             onRemoveBoundary={handleRemoveBoundary}
+            onSelectBoundary={() => {
+              setFocusRequest((value) => value + 1);
+            }}
           />
 
           {boundaries.length > 0 && (
@@ -361,6 +378,7 @@ export default function StudioPage() {
             selectedBoundaryId={mainDetected?.boundary?.id || ""}
             selectedBoundaryFeature={mainDetected?.feature || null}
             activeLayerId={activeLayerId}
+            focusRequest={focusRequest}
           />
         </main>
 

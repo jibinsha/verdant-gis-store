@@ -9,6 +9,7 @@ import {
   LngLatBounds
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { featureContainsPoint } from "./spatial";
 
 const SOURCE_PREFIX = "studio-source-";
 const LAYER_PREFIX = "studio-layer-";
@@ -169,23 +170,41 @@ function fitToMapExtent(
     duration = 550
   }
 ) {
+  const pointBounds = featureBounds(points);
   const boundaryBounds = featureBounds([
     ...(boundaryFeatures || []),
     ...(selectedBoundaryFeature ? [selectedBoundaryFeature] : [])
   ]);
   const analysisBounds = featureBounds(analysisGeojson?.features || []);
-  const pointBounds = featureBounds(points);
 
-  // The map canvas must keep the complete custom boundary and every CSV point
-  // visible. When a boundary is supplied, use the union of its extent and the
-  // point extent rather than letting the point cluster hide the boundary.
+  // Only let the selected boundary control the camera when the complete CSV
+  // point set is actually inside it. If the boundary is unrelated to the
+  // sampling points, keep the map focused on every point instead of zooming
+  // out to an unreadable extent.
+  const pointsAreInsideSelectedBoundary =
+    Boolean(selectedBoundaryFeature) &&
+    points.length > 0 &&
+    points.every((point) =>
+      featureContainsPoint(
+        selectedBoundaryFeature,
+        point?.geometry?.coordinates
+      )
+    );
+
+  const useBoundaryExtent =
+    Boolean(boundaryBounds && !boundaryBounds.isEmpty()) &&
+    (points.length === 0 || pointsAreInsideSelectedBoundary);
+
   const bounds = new LngLatBounds();
-  if (boundaryBounds && !boundaryBounds.isEmpty()) {
+
+  if (useBoundaryExtent && boundaryBounds && !boundaryBounds.isEmpty()) {
     bounds.extend(boundaryBounds);
   }
+
   if (pointBounds && !pointBounds.isEmpty()) {
     bounds.extend(pointBounds);
   }
+
   if (analysisBounds && !analysisBounds.isEmpty()) {
     bounds.extend(analysisBounds);
   }
@@ -209,7 +228,7 @@ function fitToMapExtent(
   }
 
   map.fitBounds(bounds, {
-    padding: { top: 70, bottom: 70, left: 70, right: 70 },
+    padding: { top: 55, bottom: 55, left: 55, right: 55 },
     maxZoom: 17,
     duration
   });
@@ -286,7 +305,8 @@ export default function StudioMap({
   showPoints = true,
   selectedBoundaryId = "",
   selectedBoundaryFeature = null,
-  activeLayerId = null
+  activeLayerId = null,
+  focusRequest = 0
 }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
@@ -614,7 +634,8 @@ export default function StudioMap({
     showPoints,
     selectedBoundaryId,
     selectedBoundaryFeature,
-    activeLayerId
+    activeLayerId,
+    focusRequest
   ]);
 
   return (

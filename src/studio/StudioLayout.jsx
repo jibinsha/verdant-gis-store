@@ -457,9 +457,10 @@ function MainMap({
   const hasInterpolation =
     cells?.length > 0 && Boolean(valueField);
 
-  const boundaryContainsPoints = Boolean(
+  const boundaryContainsAllPoints = Boolean(
     boundaryFeature &&
-      (points || []).some((point) =>
+      points?.length &&
+      points.every((point) =>
         featureContainsPoint(
           boundaryFeature,
           point?.geometry?.coordinates
@@ -469,46 +470,19 @@ function MainMap({
 
   /*
    * Publication extent logic:
-   * - If the boundary contains at least one point, keep the boundary and
-   *   sampling locations together when the boundary is reasonably local.
-   * - If the boundary is geographically separate from the points, do NOT let
-   *   that boundary make the sampling map zoom out to an unreadable scale.
-   *   The main frame focuses on all points and a small boundary overview is
-   *   rendered below.
-   * - A very large administrative boundary is treated the same way. This
-   *   prevents a country-sized boundary from making six local points tiny.
+   * - When every sampling point is inside the selected boundary, the boundary
+   *   and all points share the main map frame.
+   * - When the boundary does not contain the complete point set, the main map
+   *   stays tightly fitted to all sampling points and the boundary is shown
+   *   only as a small overview.
+   *
+   * This prevents an unrelated/custom boundary from making the sampling sites
+   * tiny while still giving the reader geographic context.
    */
-  const pointBbox = bboxFrom([], points);
-  const boundaryBbox = boundaryFeature
-    ? bboxFrom([boundaryFeature])
-    : null;
-
-  const pointWidth = pointBbox
-    ? Math.max(pointBbox[2] - pointBbox[0], 0.000001)
-    : null;
-  const pointHeight = pointBbox
-    ? Math.max(pointBbox[3] - pointBbox[1], 0.000001)
-    : null;
-  const boundaryWidth = boundaryBbox
-    ? Math.max(boundaryBbox[2] - boundaryBbox[0], 0.000001)
-    : null;
-  const boundaryHeight = boundaryBbox
-    ? Math.max(boundaryBbox[3] - boundaryBbox[1], 0.000001)
-    : null;
-
-  const boundaryAreaRatio =
-    pointWidth &&
-    pointHeight &&
-    boundaryWidth &&
-    boundaryHeight
-      ? (boundaryWidth * boundaryHeight) /
-        (pointWidth * pointHeight)
-      : 1;
-
   const focusPoints =
     Boolean(points?.length) &&
     Boolean(boundaryFeature) &&
-    (!boundaryContainsPoints || boundaryAreaRatio > 80);
+    !boundaryContainsAllPoints;
 
   const extentFeatures = focusPoints
     ? [
@@ -747,7 +721,7 @@ function MainMap({
           />
         )}
 
-      {showBoundary && focusPoints && (
+      {showBoundary && focusPoints && !boundaryContainsAllPoints && (
         <BoundaryOverview
           boundaryFeature={boundaryFeature}
           x={plotX + 14}
