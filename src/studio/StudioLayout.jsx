@@ -407,7 +407,8 @@ function MainMap({
   showGrid,
   showBoundary,
   showLabels,
-  samplingLegend
+  samplingLegend,
+  fitToBoundary = false
 }) {
   const hasInterpolation =
     cells?.length > 0 && Boolean(valueField);
@@ -415,8 +416,12 @@ function MainMap({
   // The publication map should be centred on the sampling locations.
   // Boundaries and interpolation cells are visual/clip layers and must not
   // pull the map extent away from the actual study points.
+  const isCustomBoundary = Boolean(fitToBoundary);
+
   const extentFeatures =
-    points?.length
+    isCustomBoundary
+      ? [...(points || []), boundaryFeature]
+      : points?.length
       ? points
       : boundaryFeature
       ? [boundaryFeature]
@@ -1046,6 +1051,7 @@ function LayoutSvg({
         }
         showLabels={showLabels}
         samplingLegend={samplingLegend}
+        fitToBoundary={detected?.mainBoundaryLevel === "custom"}
       />
     </svg>
   );

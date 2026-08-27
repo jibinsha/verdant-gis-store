@@ -164,6 +164,7 @@ function fitToMapExtent(
   {
     points = [],
     selectedBoundaryFeature = null,
+    selectedBoundaryIsCustom = false,
     analysisGeojson = null,
     duration = 550
   }
@@ -174,10 +175,21 @@ function fitToMapExtent(
   const analysisBounds = featureBounds(analysisGeojson?.features || []);
   const pointBounds = featureBounds(points);
 
-  // Always frame the current sampling locations first. Boundaries and IDW
-  // surfaces are overlays/clipping extents and must never force the map
-  // view to zoom out to a much larger administrative area.
-  const bounds = pointBounds || analysisBounds || boundaryBounds;
+  // Uploaded custom boundaries are the user's explicit study area, so keep
+  // the complete boundary and the sampling points in the map view together.
+  // Preserve the existing point-first behaviour for permanent boundaries.
+  let bounds = pointBounds || analysisBounds || boundaryBounds;
+
+  if (selectedBoundaryIsCustom && boundaryBounds) {
+    const combined = new LngLatBounds();
+    if (pointBounds) {
+      combined.extend(pointBounds.getSouthWest());
+      combined.extend(pointBounds.getNorthEast());
+    }
+    combined.extend(boundaryBounds.getSouthWest());
+    combined.extend(boundaryBounds.getNorthEast());
+    bounds = combined;
+  }
   if (!bounds || bounds.isEmpty()) return;
 
   const sw = bounds.getSouthWest();
@@ -275,6 +287,7 @@ export default function StudioMap({
   showPoints = true,
   selectedBoundaryId = "",
   selectedBoundaryFeature = null,
+  selectedBoundaryIsCustom = false,
   activeLayerId = null
 }) {
   const containerRef = useRef(null);
@@ -436,6 +449,7 @@ export default function StudioMap({
       fitToMapExtent(map, {
         points,
         selectedBoundaryFeature,
+        selectedBoundaryIsCustom,
         analysisGeojson:
           mapMode === "interpolation"
             ? analysisResult?.geojson

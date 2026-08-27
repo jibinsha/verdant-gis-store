@@ -346,6 +346,7 @@ export default function StudioPage() {
             mapMode={mapMode}
             selectedBoundaryId={mainDetected?.boundary?.id || ""}
             selectedBoundaryFeature={mainDetected?.feature || null}
+            selectedBoundaryIsCustom={mainDetected?.level === "custom"}
             activeLayerId={activeLayerId}
           />
         </main>
@@ -424,7 +425,11 @@ export default function StudioPage() {
         layers={layers}
         activeLayer={activeLayer}
         boundaries={boundaries}
-        detected={{ ...detected, mainFeature: mainDetected?.feature || null }}
+        detected={{
+          ...detected,
+          mainFeature: mainDetected?.feature || null,
+          mainBoundaryLevel: mainDetected?.level || null
+        }}
         analysisResult={analysisResult}
       />
     </div>
