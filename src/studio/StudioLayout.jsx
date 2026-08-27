@@ -475,16 +475,20 @@ function MainMap({
   const hasCustomBoundary = Boolean(customBoundaryFeature);
   const boundaryOutsidePoints =
     hasCustomBoundary && !boundaryContainsAllPoints;
+  const showCustomBoundaryInMain =
+    hasCustomBoundary && boundaryContainsAllPoints;
 
-  // Publication camera:
-  // 1. No uploaded boundary -> all CSV points, tightly fitted.
-  // 2. Uploaded boundary contains every point -> boundary + points in main map.
-  // 3. Uploaded boundary is unrelated/partly outside -> points stay in the
-  //    main map and the boundary is represented only by the overview.
+  // Publication extent rules:
+  // 1. No custom boundary -> fit the sampling points (and the detected
+  //    permanent study boundary when one is available).
+  // 2. Custom boundary contains every point -> fit boundary + points and
+  //    draw that custom boundary in the main frame.
+  // 3. Custom boundary is outside/partial -> keep the point-first main map
+  //    and show ONLY the custom boundary in the overview.
   const extentFeatures = hasInterpolation
     ? [
         ...(points || []),
-        ...(customBoundaryFeature && boundaryContainsAllPoints
+        ...(showCustomBoundaryInMain
           ? [customBoundaryFeature]
           : []),
         ...(cells || [])
@@ -493,7 +497,11 @@ function MainMap({
       ? [...(points || [])]
       : [
           ...(points || []),
-          ...(customBoundaryFeature ? [customBoundaryFeature] : [])
+          ...(showCustomBoundaryInMain
+            ? [customBoundaryFeature]
+            : boundaryFeature
+              ? [boundaryFeature]
+              : [])
         ];
 
   const rawBbox = bboxFrom(extentFeatures, points);
@@ -548,9 +556,21 @@ function MainMap({
     .toString(36)
     .slice(2)}`;
 
-  const boundaryPath = customBoundaryFeature
+  // The custom boundary has its own display rule. Do not use the detected
+  // administrative boundary as a substitute here: when a custom boundary
+  // contains all sampling points, that exact uploaded shape must be drawn in
+  // the main publication map. When it does not contain all points, it must
+  // stay out of the main map and appear only in BoundaryOverview.
+  const mainBoundaryFeature =
+    showCustomBoundaryInMain
+      ? customBoundaryFeature
+      : !hasCustomBoundary
+        ? boundaryFeature
+        : null;
+
+  const boundaryPath = mainBoundaryFeature
     ? geometryPath(
-        customBoundaryFeature.geometry,
+        mainBoundaryFeature.geometry,
         project
       )
     : "";
@@ -691,19 +711,21 @@ function MainMap({
       )}
 
       {!hasInterpolation &&
-        boundaryFeature && (
+        mainBoundaryFeature &&
+        boundaryPath && (
           <path
             d={`translate(${plotX} ${plotY}) ${boundaryPath}`}
             fill="#f7f8f7"
             fillRule="evenodd"
             stroke={
               showBoundary
-                ? "#555e5a"
+                ? "#087f5b"
                 : "none"
             }
             strokeWidth={
-              showBoundary ? "1.1" : "0"
+              showBoundary ? "1.8" : "0"
             }
+            strokeLinejoin="round"
           />
         )}
 
@@ -975,7 +997,7 @@ function MainMap({
       )}
 
       {showLabels &&
-        boundaryFeature && (
+        mainBoundaryFeature && (
           <text
             x={plotX + plotW / 2}
             y={plotY + plotH / 2}
@@ -984,7 +1006,7 @@ function MainMap({
             fill="#39453f"
           >
             {featureName(
-              boundaryFeature,
+              mainBoundaryFeature,
               ""
             )}
           </text>

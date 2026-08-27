@@ -16,6 +16,14 @@
 - Layout uses CSV points as the default extent; custom boundary is included in the main frame only when all points are inside it. Otherwise it is shown only in the Boundary overview.
 - Shows `Fetching auto location…` while automatic study-area detection is running.
 # Verdant GIS Studio V24
+## V26.1 interaction/layout fixes
+
+- Custom boundaries that contain all sampling points are now drawn as the actual boundary shape in the A4 main map, together with the points.
+- Custom boundaries that contain none/only some of the points remain in the Boundary Overview only.
+- If no custom boundary is uploaded, the existing point/automatic-study-area layout behavior is preserved.
+- Project-layer zoom is handled as an explicit camera action using the clicked layer ID, so selecting a layer cannot be lost in a state-update race.
+- Automatic boundary-resolution results do not trigger another camera fit, preventing the map from re-zooming after `Fetching auto location…` completes.
+
 
 This version separates the **location-map workflow** from the **IDW interpolation workflow** and prepares the Studio for permanent backend administrative boundaries.
 

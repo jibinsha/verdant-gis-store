@@ -618,24 +618,23 @@ export default function StudioMap({
     focusRequest
   ]);
 
-  // Camera fitting is deliberately split from rendering.
-  // Boundary-resolution responses are visual data only and must never steal
-  // the viewport from the sampling points. Only an active-layer/map-mode
-  // change or an explicit focus request is allowed to move the camera.
-  const lastFocusRequestRef = useRef(-1);
-
+  // Camera fitting is deliberately separated from rendering and from the
+  // automatic boundary-resolution state. Automatic boundary data must never
+  // steal the viewport from the sampling points. Layer selection/upload and
+  // boundary selection are handled by the explicit focus effect below.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    const activeLayer = (layers || []).find(
-      (layer) => layer?.id === activeLayerId
-    );
-    const points = getPointFeatures(activeLayer ? [activeLayer] : []);
-
     const fit = () => {
       if (!mapRef.current || !map.isStyleLoaded()) return;
 
+      const activeLayer = (layers || []).find(
+        (layer) => layer?.id === activeLayerId
+      );
+      const points = getPointFeatures(activeLayer ? [activeLayer] : []);
+
+      map.stop();
       fitToMapExtent(map, {
         points,
         selectedBoundaryFeature,
@@ -651,14 +650,13 @@ export default function StudioMap({
     };
 
     if (map.isStyleLoaded()) {
-      map.stop();
       fit();
     } else {
       map.once("load", fit);
     }
 
     return () => map.off("load", fit);
-  }, [activeLayerId, mapMode, analysisResult]);
+  }, [mapMode, analysisResult]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -667,13 +665,24 @@ export default function StudioMap({
     if (lastFocusRequestRef.current === focusRequest) return;
     lastFocusRequestRef.current = focusRequest;
 
-    const activeLayer = (layers || []).find(
-      (layer) => layer?.id === activeLayerId
-    );
-    const points = getPointFeatures(activeLayer ? [activeLayer] : []);
-    const uploadedBoundaryFeatures = (boundaries || [])
-      .filter((boundary) => boundary?.sourceType === "upload")
-      .flatMap((boundary) => boundary?.geojson?.features || []);
+    // Resolve the layer/boundary from the explicit focus request rather than
+    // relying on whichever state update happens to win the render race.
+    const targetLayer =
+      focusTarget?.type === "layer"
+        ? (layers || []).find((layer) => layer?.id === focusTarget.id)
+        : (layers || []).find((layer) => layer?.id === activeLayerId);
+    const points = getPointFeatures(targetLayer ? [targetLayer] : []);
+
+    const targetBoundary =
+      focusTarget?.type === "boundary"
+        ? (boundaries || []).find(
+            (boundary) => boundary?.id === focusTarget.id
+          )
+        : null;
+
+    const boundaryFeatures = targetBoundary
+      ? (targetBoundary.geojson?.features || [])
+      : [];
 
     const focus = () => {
       if (!mapRef.current || !map.isStyleLoaded()) return;
@@ -682,8 +691,11 @@ export default function StudioMap({
 
       fitToMapExtent(map, {
         points,
-        selectedBoundaryFeature,
-        boundaryFeatures: uploadedBoundaryFeatures,
+        selectedBoundaryFeature:
+          focusTarget?.type === "boundary"
+            ? selectedBoundaryFeature
+            : null,
+        boundaryFeatures,
         analysisGeojson: null,
         mapModeForFit: "location",
         focusTarget,
@@ -692,15 +704,22 @@ export default function StudioMap({
     };
 
     if (map.isStyleLoaded()) {
-      // Wait one frame so a newly uploaded/selected layer has been rendered
-      // into the current map before moving the camera.
+      // Run after the current render so newly selected/uploaded features are
+      // already present in the map before the camera is fitted.
       const frame = requestAnimationFrame(focus);
       return () => cancelAnimationFrame(frame);
     }
 
     map.once("load", focus);
     return () => map.off("load", focus);
-  }, [focusRequest]);
+  }, [
+    focusRequest,
+    focusTarget,
+    activeLayerId,
+    layers,
+    boundaries,
+    selectedBoundaryFeature
+  ]);
 
   return (
     <div
