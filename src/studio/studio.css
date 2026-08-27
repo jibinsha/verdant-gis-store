@@ -2,7 +2,7 @@
   min-height:100vh;
   background:#f5f8f6;
   color:#10251e;
-  zoom:0.92;
+  zoom:0.85;
 }
 .studio-header{display:flex;justify-content:space-between;gap:24px;padding:32px 5%;border-bottom:1px solid #dce7e1;background:#fff}
 .studio-header h1{margin:6px 0;font-size:38px}
