@@ -415,11 +415,12 @@ function MainMap({
   // The publication map should be centred on the sampling locations.
   // Boundaries and interpolation cells are visual/clip layers and must not
   // pull the map extent away from the actual study points.
-  const extentFeatures = [
-    ...(points || []),
-    ...(boundaryFeature ? [boundaryFeature] : []),
-    ...(cells || [])
-  ];
+  const extentFeatures =
+    points?.length
+      ? points
+      : boundaryFeature
+      ? [boundaryFeature]
+      : cells;
 
   const rawBbox = bboxFrom(
     extentFeatures,

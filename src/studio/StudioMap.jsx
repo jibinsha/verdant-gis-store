@@ -174,10 +174,20 @@ function fitToMapExtent(
   const analysisBounds = featureBounds(analysisGeojson?.features || []);
   const pointBounds = featureBounds(points);
 
-  // Always frame the current sampling locations first. Boundaries and IDW
-  // surfaces are overlays/clipping extents and must never force the map
-  // view to zoom out to a much larger administrative area.
-  const bounds = pointBounds || analysisBounds || boundaryBounds;
+  // Always keep the uploaded/custom boundary and all CSV sampling points
+  // inside the visible map extent. This guarantees the boundary is visible
+  // even when it contains none of the sampling points.
+  const bounds = new LngLatBounds();
+  [pointBounds, boundaryBounds].forEach((candidate) => {
+    if (!candidate || candidate.isEmpty()) return;
+    bounds.extend(candidate.getSouthWest());
+    bounds.extend(candidate.getNorthEast());
+  });
+
+  if (bounds.isEmpty() && analysisBounds && !analysisBounds.isEmpty()) {
+    bounds.extend(analysisBounds.getSouthWest());
+    bounds.extend(analysisBounds.getNorthEast());
+  }
   if (!bounds || bounds.isEmpty()) return;
 
   const sw = bounds.getSouthWest();
