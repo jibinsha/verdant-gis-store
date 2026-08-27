@@ -1,4 +1,4 @@
-# Verdant GIS Studio V22
+# Verdant GIS Studio V24
 
 This version separates the **location-map workflow** from the **IDW interpolation workflow** and prepares the Studio for permanent backend administrative boundaries.
 
@@ -118,3 +118,17 @@ server/gis/boundaries/
 
 The backend caches these files after first use and returns only the matched administrative features needed by the Studio.
 
+
+
+## V24 camera behavior
+
+- CSV upload fits once to all valid sampling points.
+- Automatic permanent boundary loading never changes that viewport.
+- Clicking a project layer explicitly zooms to that layer.
+- Clicking the custom boundary explicitly zooms to the boundary.
+- Removing the custom boundary returns the camera to the active CSV points.
+- Compact point sets are capped at a readable maximum zoom instead of being
+  over-zoomed.
+- The A4 layout keeps all sampling points visible and uses the custom/main
+  boundary in the main frame only when all sampling points are inside it;
+  otherwise it keeps the point-focused main frame and boundary overview.

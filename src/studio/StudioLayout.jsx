@@ -484,21 +484,29 @@ function MainMap({
     Boolean(boundaryFeature) &&
     !boundaryContainsAllPoints;
 
-  const extentFeatures = focusPoints
+  /*
+   * Location-map publication extent:
+   * - All points inside the boundary -> boundary + all points share the main
+   *   frame and there is NO boundary overview.
+   * - Boundary does not contain all points -> the sampling points are the
+   *   authoritative main-map extent; the boundary is contextualized in the
+   *   overview.
+   * - No boundary -> fit tightly to every sampling point.
+   */
+  const extentFeatures = hasInterpolation
     ? [
-        ...(points || []),
-        ...(cells || [])
-      ]
-    : [
         ...(points || []),
         ...(boundaryFeature ? [boundaryFeature] : []),
         ...(cells || [])
-      ];
+      ]
+    : focusPoints
+      ? [...(points || [])]
+      : [
+          ...(points || []),
+          ...(boundaryFeature ? [boundaryFeature] : [])
+        ];
 
-  const rawBbox = bboxFrom(
-    extentFeatures,
-    points
-  );
+  const rawBbox = bboxFrom(extentFeatures, points);
 
   // The publication map frame is a distinct dark rectangle. Grid lines stay
   // inside it, while coordinate labels/ticks sit directly on the outside
@@ -516,7 +524,7 @@ function MainMap({
   const bbox = aspectFitBbox(
     rawBbox,
     plotW / plotH,
-    hasInterpolation ? 0.025 : 0.045
+    hasInterpolation ? 0.025 : (focusPoints ? 0.07 : 0.045)
   );
 
   const project = projectionFor(

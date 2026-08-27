@@ -41,6 +41,7 @@ export default function StudioPage() {
   const [mapMode, setMapMode] = useState("location");
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [focusRequest, setFocusRequest] = useState(0);
+  const [focusTarget, setFocusTarget] = useState(null);
 
   const activeLayer = useMemo(
     () => layers.find((layer) => layer.id === activeLayerId) || null,
@@ -224,6 +225,8 @@ export default function StudioPage() {
     setActiveLayerId(layer.id);
     setAnalysisResult(null);
     setMapMode("location");
+    setFocusTarget({ type: "layer", id: layer.id });
+    setFocusRequest((value) => value + 1);
   }
 
   function removeLayer(id) {
@@ -244,6 +247,10 @@ export default function StudioPage() {
     ]);
     setAnalysisResult(null);
     setMapMode("location");
+    // Boundary upload is an explicit user action. Request a boundary focus,
+    // but StudioMap will fall back to the point extent if the boundary is
+    // unrelated to the sampling points.
+    setFocusTarget({ type: "boundary", id: boundary.id });
     setFocusRequest((value) => value + 1);
   }
 
@@ -253,6 +260,7 @@ export default function StudioPage() {
     );
     setAnalysisResult(null);
     setMapMode("location");
+    setFocusTarget(activeLayerId ? { type: "layer", id: activeLayerId } : null);
     setFocusRequest((value) => value + 1);
   }
 
@@ -339,11 +347,13 @@ export default function StudioPage() {
               setActiveLayerId(id);
               setAnalysisResult(null);
               setMapMode("location");
+              setFocusTarget({ type: "layer", id });
               setFocusRequest((value) => value + 1);
             }}
             onRemove={removeLayer}
             onRemoveBoundary={handleRemoveBoundary}
-            onSelectBoundary={() => {
+            onSelectBoundary={(id) => {
+              setFocusTarget({ type: "boundary", id });
               setFocusRequest((value) => value + 1);
             }}
           />
@@ -381,6 +391,7 @@ export default function StudioPage() {
             selectedBoundaryFeature={mainDetected?.feature || null}
             activeLayerId={activeLayerId}
             focusRequest={focusRequest}
+            focusTarget={focusTarget}
           />
         </main>
 

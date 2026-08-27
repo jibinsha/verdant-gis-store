@@ -1,5 +1,5 @@
 {
-  "version": "V23",
+  "version": "V24",
   "purpose": "GIS Store V21 Studio integration: location maps, IDW interpolation, permanent backend boundary resolution and A4 landscape publication layouts",
   "reference_version": "V4.2",
   "files": [
@@ -23,18 +23,13 @@
   ],
   "syntax_checked": true,
   "notes": [
-    "Studio-only integration for GIS Store V21; unrelated Store, catalogue, authentication, payment and download code is unchanged.",
-    "Location-map mode clears any previous IDW result, so interpolation cannot leak into a location-map layout.",
-    "IDW remains visible in the main Studio canvas immediately after processing and is clipped to the selected study boundary.",
-    "The backend resolves permanent country, state, district and village boundaries from server/gis/boundaries without requiring customers to upload those datasets.",
-    "The customer boundary uploader is reserved for a custom GeoJSON or ZIP shapefile boundary.",
-    "The backend returns India state features for the country inset and state district features for the state inset, allowing publication-style locator maps.",
-    "A4 landscape layout keeps location maps points-only and IDW layouts interpolation-plus-points, with publication-style coordinate grid, north arrow, scale bar and editable sampling legend.",
-    "Coordinate grid uses three interior longitude/latitude labels; longitude labels sit above/below the main frame and latitude labels sit vertically outside the left/right frame.",
-    "Studio map redraw/zoom is synchronized with layer add/remove/selection without requiring a page refresh.",
-    "Camera fitting is separated from boundary rendering: asynchronous permanent boundary resolution no longer re-zooms the Studio canvas after CSV points have been fitted.",
-    "CSV point fitting uses tighter padding and allows a higher maximum zoom for compact sampling datasets; single-point datasets use a closer camera.",
-    "Custom boundary add/remove operations explicitly request a camera refit, while automatic permanent boundary loading only redraws the map.",
-    "The permanent boundary API is isolated at /api/studio/boundaries/resolve."
+    "Location-map camera uses the uploaded CSV point extent as the authoritative automatic viewport.",
+    "Asynchronous permanent boundary resolution redraws boundaries without changing the automatic CSV viewport.",
+    "Clicking a project CSV layer explicitly fits all features in that layer; clicking a project boundary explicitly fits that boundary.",
+    "Custom boundary upload requests an explicit boundary focus but never expands an unrelated boundary to include outlying CSV points.",
+    "Map camera fitting uses bounded padding and a 16.5 maximum zoom so compact point datasets remain readable while all points stay visible.",
+    "A4 location layout uses boundary plus points in the main frame only when every sampling point is inside the boundary; otherwise it keeps the point-focused main frame and boundary overview.",
+    "The custom boundary remains a visible project layer with its delete control.",
+    "The permanent boundary API and existing remove-boundary implementation are unchanged."
   ]
 }

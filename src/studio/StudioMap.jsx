@@ -167,6 +167,8 @@ function fitToMapExtent(
     selectedBoundaryFeature = null,
     boundaryFeatures = [],
     analysisGeojson = null,
+    focusTarget = null,
+    mapModeForFit = "location",
     duration = 550
   }
 ) {
@@ -177,40 +179,64 @@ function fitToMapExtent(
   ]);
   const analysisBounds = featureBounds(analysisGeojson?.features || []);
 
-  // Only let the selected boundary control the camera when the complete CSV
-  // point set is actually inside it. If the boundary is unrelated to the
-  // sampling points, keep the map focused on every point instead of zooming
-  // out to an unreadable extent.
-  const pointsAreInsideSelectedBoundary =
-    Boolean(selectedBoundaryFeature) &&
-    points.length > 0 &&
-    points.every((point) =>
-      featureContainsPoint(
-        selectedBoundaryFeature,
-        point?.geometry?.coordinates
-      )
-    );
-
-  const useBoundaryExtent =
-    Boolean(boundaryBounds && !boundaryBounds.isEmpty()) &&
-    (points.length === 0 || pointsAreInsideSelectedBoundary);
-
+  /*
+   * Camera policy:
+   *
+   * 1. Initial CSV load / automatic boundary resolution:
+   *    fit ONLY the complete point set. Administrative boundary loading must
+   *    never make the sampling points tiny.
+   *
+   * 2. Clicking a CSV layer:
+   *    fit ONLY that layer's points.
+   *
+   * 3. Clicking/uploading a custom boundary:
+   *    fit the selected boundary. If it contains the sampling points, include
+   *    the points naturally in that extent; otherwise keep the boundary as the
+   *    explicit target rather than letting an unrelated permanent boundary
+   *    control the camera.
+   *
+   * 4. Interpolation:
+   *    include the generated surface only when there is no explicit layer or
+   *    boundary focus request.
+   */
   const bounds = new LngLatBounds();
 
-  if (useBoundaryExtent && boundaryBounds && !boundaryBounds.isEmpty()) {
+  if (focusTarget?.type === "boundary" && boundaryBounds && !boundaryBounds.isEmpty()) {
     bounds.extend(boundaryBounds);
-  }
+    if (pointBounds && !pointBounds.isEmpty()) {
+      // Keep sampling points visible when they fall inside the selected
+      // boundary, but do not expand an unrelated boundary to include them.
+      const boundaryFeature =
+        selectedBoundaryFeature ||
+        (boundaryFeatures || [])[0] ||
+        null;
+      const pointsInside =
+        boundaryFeature &&
+        points.length > 0 &&
+        points.every((point) =>
+          featureContainsPoint(
+            boundaryFeature,
+            point?.geometry?.coordinates
+          )
+        );
 
-  if (pointBounds && !pointBounds.isEmpty()) {
+      if (pointsInside) bounds.extend(pointBounds);
+    }
+  } else if (pointBounds && !pointBounds.isEmpty()) {
+    // This is the important default: CSV extent is authoritative.
     bounds.extend(pointBounds);
-  }
 
-  if (analysisBounds && !analysisBounds.isEmpty()) {
-    bounds.extend(analysisBounds);
+    if (
+      !focusTarget &&
+      mapModeForFit === "interpolation" &&
+      analysisBounds &&
+      !analysisBounds.isEmpty()
+    ) {
+      bounds.extend(analysisBounds);
+    }
   }
 
   if (bounds.isEmpty()) return;
-  if (!bounds || bounds.isEmpty()) return;
 
   const sw = bounds.getSouthWest();
   const ne = bounds.getNorthEast();
@@ -221,19 +247,22 @@ function fitToMapExtent(
   if (samePoint) {
     map.easeTo({
       center: [sw.lng, sw.lat],
-      zoom: 17.5,
+      // Close enough to see the sampling site without making a single point
+      // fill the entire canvas.
+      zoom: 15.5,
       duration
     });
     return;
   }
 
   map.fitBounds(bounds, {
-    padding: { top: 32, bottom: 32, left: 32, right: 32 },
-    maxZoom: 18,
+    padding: { top: 70, bottom: 70, left: 70, right: 70 },
+    // Do not over-zoom a compact point cluster. fitBounds still guarantees
+    // every point remains visible.
+    maxZoom: 16.5,
     duration
   });
 }
-
 function markerElement(size) {
   const el = document.createElement("div");
   const px = Math.max(10, Number(size || 6) * 2);
@@ -306,7 +335,8 @@ export default function StudioMap({
   selectedBoundaryId = "",
   selectedBoundaryFeature = null,
   activeLayerId = null,
-  focusRequest = 0
+  focusRequest = 0,
+  focusTarget = null
 }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
@@ -644,18 +674,21 @@ export default function StudioMap({
           mapMode === "interpolation"
             ? analysisResult?.geojson
             : null,
+        mapModeForFit: mapMode,
+        focusTarget,
         duration: 450
       });
     };
 
     const scheduleFit = () => {
+      /*
+       * Fit exactly once per explicit camera request/data change.
+       * The previous delayed second fit caused the visible "re-zoom" effect:
+       * the first fit was correct, then the timeout fitted again and made the
+       * viewport appear to jump. Raster tiles do not need a second fit.
+       */
       map.stop();
       fitCurrentExtent();
-
-      // One delayed fit is enough to handle a newly painted raster/source
-      // without repeatedly re-fitting when automatic boundaries arrive.
-      const timeoutId = window.setTimeout(fitCurrentExtent, 120);
-      fitTimeoutsRef.current.push(timeoutId);
     };
 
     if (map.isStyleLoaded()) {
@@ -674,6 +707,7 @@ export default function StudioMap({
   }, [
     activeLayerId,
     focusRequest,
+    focusTarget,
     mapMode,
     analysisResult
   ]);
