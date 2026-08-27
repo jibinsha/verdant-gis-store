@@ -10,6 +10,44 @@ import StudioLayout from "./StudioLayout";
 import { detectBoundaryFeature, detectBoundaryForStudy } from "./spatial";
 import { getPermanentBoundaryResolution } from "./boundaryApi";
 
+function combineBoundaryFeatures(boundary) {
+  const features = boundary?.geojson?.features || [];
+  if (!features.length) return null;
+
+  if (features.length === 1) {
+    return features[0];
+  }
+
+  const polygonParts = [];
+
+  features.forEach((feature) => {
+    const geometry = feature?.geometry;
+    if (!geometry) return;
+
+    if (geometry.type === "Polygon") {
+      polygonParts.push(geometry.coordinates);
+    } else if (geometry.type === "MultiPolygon") {
+      polygonParts.push(...geometry.coordinates);
+    }
+  });
+
+  if (!polygonParts.length) {
+    return features[0];
+  }
+
+  return {
+    type: "Feature",
+    properties: {
+      ...(features[0]?.properties || {}),
+      name: boundary.name
+    },
+    geometry: {
+      type: "MultiPolygon",
+      coordinates: polygonParts
+    }
+  };
+}
+
 export default function StudioPage() {
   const [layers, setLayers] = useState([]);
   const [boundaries, setBoundaries] = useState([]);
@@ -44,12 +82,31 @@ export default function StudioPage() {
       return null;
     };
 
+    const customBoundary = boundaries.find(
+      (item) => item.sourceType === "upload" && item.level === "custom"
+    );
+
+    // Uploaded custom boundaries are project layers in their own right.
+    // Keep the whole uploaded geometry available for the map/layout even
+    // when the sampling points do not fall inside the boundary.
+    const customFeature = customBoundary
+      ? detectBoundaryFeature(
+          customBoundary,
+          activeLayer.geojson?.features || []
+        ) || combineBoundaryFeatures(customBoundary)
+      : null;
+
     return {
       country: find("country"),
       state: find("state"),
       district: find("district"),
       village: find("village"),
-      custom: find("custom"),
+      custom: customBoundary
+        ? {
+            boundary: customBoundary,
+            feature: customFeature
+          }
+        : null,
 
       countryBoundary: find("country")?.boundary || null,
       countryFeature: find("country")?.feature || null,
@@ -59,8 +116,8 @@ export default function StudioPage() {
       districtFeature: find("district")?.feature || null,
       villageBoundary: find("village")?.boundary || null,
       villageFeature: find("village")?.feature || null,
-      customBoundary: find("custom")?.boundary || null,
-      customFeature: find("custom")?.feature || null,
+      customBoundary: customBoundary || null,
+      customFeature: customFeature || null,
       countryInsetGeojson: find("country")?.boundary?.insetGeojson || null,
       stateInsetGeojson: find("state")?.boundary?.insetGeojson || null
     };
@@ -248,6 +305,7 @@ export default function StudioPage() {
 
           <StudioLayers
             layers={layers}
+            boundaries={boundaries}
             activeLayerId={activeLayerId}
             onSelect={(id) => {
               setActiveLayerId(id);

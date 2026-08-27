@@ -1,7 +1,17 @@
 import React from "react";
-import { Layers, Trash2 } from "lucide-react";
+import { Layers, Trash2, MapPinned } from "lucide-react";
 
-export default function StudioLayers({ layers, activeLayerId, onSelect, onRemove }) {
+export default function StudioLayers({
+  layers,
+  boundaries = [],
+  activeLayerId,
+  onSelect,
+  onRemove
+}) {
+  const projectBoundaries = (boundaries || []).filter(
+    (boundary) => boundary?.sourceType === "upload"
+  );
+
   return (
     <section className="studio-panel">
       <div className="studio-panel-heading">
@@ -9,7 +19,7 @@ export default function StudioLayers({ layers, activeLayerId, onSelect, onRemove
         <Layers size={19} />
       </div>
 
-      {!layers.length ? (
+      {!layers.length && !projectBoundaries.length ? (
         <p className="studio-muted">No layers added yet.</p>
       ) : (
         <div className="studio-layer-list">
@@ -22,6 +32,15 @@ export default function StudioLayers({ layers, activeLayerId, onSelect, onRemove
               <button type="button" className="icon-btn" title="Remove layer" onClick={() => onRemove(layer.id)}>
                 <Trash2 size={16} />
               </button>
+            </div>
+          ))}
+
+          {projectBoundaries.map((boundary) => (
+            <div key={boundary.id} className="studio-layer-row">
+              <div className="studio-layer-select">
+                <strong><MapPinned size={16} /> {boundary.name}</strong>
+                <span>{boundary.level} · {boundary.geojson?.features?.length || 0} features</span>
+              </div>
             </div>
           ))}
         </div>
