@@ -7356,11 +7356,19 @@ function Footer() {
 /* =========================================================
    APP ROUTES
 ========================================================= */
+/* =========================================================
+   APP ROUTES
+========================================================= */
+
 function ScrollToTop() {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    window.scrollTo(0, 0);
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
   }, [pathname]);
 
   return null;
@@ -7372,15 +7380,9 @@ export default function App() {
       <ScrollToTop />
 
       <Routes>
-        <Route
-          path="/"
-          element={<Home />}
-        />
+        <Route path="/" element={<Home />} />
 
-        <Route
-          path="/store"
-          element={<Store />}
-        />
+        <Route path="/store" element={<Store />} />
 
         <Route
           path="/categories"
@@ -7450,7 +7452,6 @@ export default function App() {
     </>
   );
 }
-
 
 /* =========================================================
    DATASET ROUTE
