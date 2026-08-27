@@ -26,8 +26,21 @@ export default function StudioLayers({
       ) : (
         <div className="studio-layer-list">
           {layers.map((layer) => (
-            <div key={layer.id} className={`studio-layer-row ${activeLayerId === layer.id ? "active" : ""}`}>
-              <button type="button" className="studio-layer-select" onClick={() => onSelect(layer.id)}>
+            <div
+              key={layer.id}
+              className={`studio-layer-row studio-layer-row-clickable ${activeLayerId === layer.id ? "active" : ""}`}
+              role="button"
+              tabIndex={0}
+              title={`Zoom to ${layer.name}`}
+              onClick={() => onSelect(layer.id)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onSelect(layer.id);
+                }
+              }}
+            >
+              <button type="button" className="studio-layer-select" onClick={(event) => { event.stopPropagation(); onSelect(layer.id); }}>
                 <strong>{layer.name}</strong>
                 <span>{layer.featureCount ?? layer.geojson?.features?.length ?? 0} features</span>
               </button>
@@ -38,12 +51,25 @@ export default function StudioLayers({
           ))}
 
           {projectBoundaries.map((boundary) => (
-            <div key={boundary.id} className="studio-layer-row">
+            <div
+              key={boundary.id}
+              className="studio-layer-row studio-layer-row-clickable"
+              role="button"
+              tabIndex={0}
+              title={`Zoom to ${boundary.name}`}
+              onClick={() => onSelectBoundary?.(boundary.id)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onSelectBoundary?.(boundary.id);
+                }
+              }}
+            >
               <button
                 type="button"
                 className="studio-layer-select"
                 title={`Zoom to ${boundary.name}`}
-                onClick={() => onSelectBoundary?.(boundary.id)}
+                onClick={(event) => { event.stopPropagation(); onSelectBoundary?.(boundary.id); }}
               >
                 <strong><MapPinned size={16} /> {boundary.name}</strong>
                 <span>{boundary.level} · {boundary.geojson?.features?.length || 0} features</span>

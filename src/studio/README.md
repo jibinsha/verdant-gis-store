@@ -1,3 +1,11 @@
+
+## V25 fixes
+
+- Prevents automatic boundary matching from changing the CSV camera extent.
+- Project layer cards explicitly zoom to the selected layer/boundary.
+- Custom boundary is clearly rendered in the Studio map canvas.
+- Layout uses CSV points as the default extent; custom boundary is included in the main frame only when all points are inside it. Otherwise it is shown only in the Boundary overview.
+- Shows `Fetching auto location…` while automatic study-area detection is running.
 # Verdant GIS Studio V24
 
 This version separates the **location-map workflow** from the **IDW interpolation workflow** and prepares the Studio for permanent backend administrative boundaries.

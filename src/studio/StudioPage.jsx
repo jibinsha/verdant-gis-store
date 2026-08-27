@@ -42,6 +42,7 @@ export default function StudioPage() {
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [focusRequest, setFocusRequest] = useState(0);
   const [focusTarget, setFocusTarget] = useState(null);
+  const [autoLocationLoading, setAutoLocationLoading] = useState(false);
 
   const activeLayer = useMemo(
     () => layers.find((layer) => layer.id === activeLayerId) || null,
@@ -171,6 +172,7 @@ export default function StudioPage() {
   useEffect(() => {
     if (!activeLayer) {
       setRecommendedBoundaryLevel(null);
+      setAutoLocationLoading(false);
       return;
     }
 
@@ -183,10 +185,13 @@ export default function StudioPage() {
       current.filter((boundary) => boundary.sourceType === "upload")
     );
     setRecommendedBoundaryLevel(null);
+    setAutoLocationLoading(true);
 
     getPermanentBoundaryResolution(pointFeatures)
       .then((resolution) => {
         if (cancelled) return;
+
+        setAutoLocationLoading(false);
 
         const backend = (resolution?.boundaries || []).map((boundary) => ({
           ...boundary,
@@ -206,6 +211,8 @@ export default function StudioPage() {
       })
       .catch((error) => {
         if (cancelled) return;
+
+        setAutoLocationLoading(false);
 
         console.warn(
           "[Verdant GIS Studio] Permanent boundary service unavailable:",
@@ -319,6 +326,12 @@ export default function StudioPage() {
               } valid locations`
             : "Upload CSV to begin"}
 
+          {activeLayer && autoLocationLoading && (
+            <strong className="studio-auto-loading" role="status" aria-live="polite">
+              Fetching auto location…
+            </strong>
+          )}
+
           {activeLayer &&
             detected.customBoundary &&
             customBoundaryStats.total > 0 &&
@@ -414,7 +427,11 @@ export default function StudioPage() {
                 </div>
               </div>
 
-              {mainDetected?.boundary ? (
+              {autoLocationLoading ? (
+                <div className="studio-detected studio-auto-loading-card" role="status" aria-live="polite">
+                  Fetching auto location…
+                </div>
+              ) : mainDetected?.boundary ? (
                 <>
                   <p className="studio-muted">
                     The point dataset has been spatially matched to the

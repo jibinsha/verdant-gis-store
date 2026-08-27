@@ -1,5 +1,5 @@
 {
-  "version": "V24",
+  "version": "V25",
   "purpose": "GIS Store V21 Studio integration: location maps, IDW interpolation, permanent backend boundary resolution and A4 landscape publication layouts",
   "reference_version": "V4.2",
   "files": [
@@ -31,5 +31,14 @@
     "A4 location layout uses boundary plus points in the main frame only when every sampling point is inside the boundary; otherwise it keeps the point-focused main frame and boundary overview.",
     "The custom boundary remains a visible project layer with its delete control.",
     "The permanent boundary API and existing remove-boundary implementation are unchanged."
+  ],
+  "name": "camera-boundary-loading-layer-focus-fix",
+  "changes": [
+    "CSV initial viewport fits all valid points and is not re-fit when automatic boundary matching completes.",
+    "Project layer cards zoom to their selected point layer; custom boundary cards zoom to the boundary and sampling points.",
+    "Custom boundary is rendered prominently on the Studio map canvas.",
+    "Location layout uses point-only extent when no custom boundary exists.",
+    "Location layout shows custom boundary plus all points when every point is inside; otherwise only the boundary overview is shown.",
+    "Added Fetching auto location loading state in toolbar and study-area panel."
   ]
 }

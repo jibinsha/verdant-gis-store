@@ -133,3 +133,11 @@
 .studio-toolbar-status{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}
 .studio-top-warning{display:inline-flex;align-items:center;max-width:min(760px,60vw);padding:7px 12px;border:1px solid #e6c98d;border-radius:8px;background:#fff1d6;color:#8a5612;font-size:12px;line-height:1.35}
 .studio-layer-select strong{display:flex;align-items:center;gap:6px}
+
+
+/* V25 interaction/loading refinements */
+.studio-layer-row-clickable{cursor:pointer;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease}
+.studio-layer-row-clickable:hover{border-color:#147657;background:#f4faf7;box-shadow:0 2px 8px rgba(8,79,59,.08)}
+.studio-layer-row-clickable:focus-visible{outline:2px solid #147657;outline-offset:2px}
+.studio-auto-loading{display:inline-flex;align-items:center;padding:7px 12px;border:1px solid #b9d9ca;border-radius:8px;background:#edf8f2;color:#126b50;font-size:12px;line-height:1.35}
+.studio-auto-loading-card{display:flex;align-items:center;gap:8px;padding:11px 12px;margin-top:8px;border:1px solid #c8e2d5;border-radius:8px;background:#edf8f2;color:#126b50;font-weight:600}

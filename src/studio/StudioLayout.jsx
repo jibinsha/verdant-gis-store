@@ -452,58 +452,48 @@ function MainMap({
   showGrid,
   showBoundary,
   showLabels,
-  samplingLegend
+  samplingLegend,
+  customBoundaryFeature = null
 }) {
   const hasInterpolation =
     cells?.length > 0 && Boolean(valueField);
 
+  // Uploaded custom boundaries control the publication layout. Permanent
+  // country/state/district boundaries are used for context/insets, but must
+  // never make a location map zoom out and make the sampling sites tiny.
   const boundaryContainsAllPoints = Boolean(
-    boundaryFeature &&
+    customBoundaryFeature &&
       points?.length &&
       points.every((point) =>
         featureContainsPoint(
-          boundaryFeature,
+          customBoundaryFeature,
           point?.geometry?.coordinates
         )
       )
   );
 
-  /*
-   * Publication extent logic:
-   * - When every sampling point is inside the selected boundary, the boundary
-   *   and all points share the main map frame.
-   * - When the boundary does not contain the complete point set, the main map
-   *   stays tightly fitted to all sampling points and the boundary is shown
-   *   only as a small overview.
-   *
-   * This prevents an unrelated/custom boundary from making the sampling sites
-   * tiny while still giving the reader geographic context.
-   */
-  const focusPoints =
-    Boolean(points?.length) &&
-    Boolean(boundaryFeature) &&
-    !boundaryContainsAllPoints;
+  const hasCustomBoundary = Boolean(customBoundaryFeature);
+  const boundaryOutsidePoints =
+    hasCustomBoundary && !boundaryContainsAllPoints;
 
-  /*
-   * Location-map publication extent:
-   * - All points inside the boundary -> boundary + all points share the main
-   *   frame and there is NO boundary overview.
-   * - Boundary does not contain all points -> the sampling points are the
-   *   authoritative main-map extent; the boundary is contextualized in the
-   *   overview.
-   * - No boundary -> fit tightly to every sampling point.
-   */
+  // Publication camera:
+  // 1. No uploaded boundary -> all CSV points, tightly fitted.
+  // 2. Uploaded boundary contains every point -> boundary + points in main map.
+  // 3. Uploaded boundary is unrelated/partly outside -> points stay in the
+  //    main map and the boundary is represented only by the overview.
   const extentFeatures = hasInterpolation
     ? [
         ...(points || []),
-        ...(boundaryFeature ? [boundaryFeature] : []),
+        ...(customBoundaryFeature && boundaryContainsAllPoints
+          ? [customBoundaryFeature]
+          : []),
         ...(cells || [])
       ]
-    : focusPoints
+    : boundaryOutsidePoints
       ? [...(points || [])]
       : [
           ...(points || []),
-          ...(boundaryFeature ? [boundaryFeature] : [])
+          ...(customBoundaryFeature ? [customBoundaryFeature] : [])
         ];
 
   const rawBbox = bboxFrom(extentFeatures, points);
@@ -558,9 +548,9 @@ function MainMap({
     .toString(36)
     .slice(2)}`;
 
-  const boundaryPath = boundaryFeature
+  const boundaryPath = customBoundaryFeature
     ? geometryPath(
-        boundaryFeature.geometry,
+        customBoundaryFeature.geometry,
         project
       )
     : "";
@@ -729,9 +719,9 @@ function MainMap({
           />
         )}
 
-      {showBoundary && focusPoints && !boundaryContainsAllPoints && (
+      {showBoundary && boundaryOutsidePoints && (
         <BoundaryOverview
-          boundaryFeature={boundaryFeature}
+          boundaryFeature={customBoundaryFeature}
           x={plotX + 14}
           y={plotY + plotH - 126}
           width={150}
@@ -1024,6 +1014,7 @@ function LayoutSvg({
   countryInsetGeojson,
   stateInsetGeojson,
   mainFeature,
+  customBoundaryFeature,
   mainPoints,
   idwCells,
   valueField,
@@ -1121,6 +1112,7 @@ function LayoutSvg({
         boundaryFeature={
           mainFeature
         }
+        customBoundaryFeature={customBoundaryFeature}
         points={mainPoints}
         cells={
           isInterpolation
@@ -1300,6 +1292,7 @@ export default function StudioLayout({
     countryInsetGeojson,
     stateInsetGeojson,
     mainFeature,
+    customBoundaryFeature: detected?.customFeature || null,
     mainPoints: points,
     idwCells,
     valueField:

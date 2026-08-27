@@ -178,62 +178,33 @@ function fitToMapExtent(
     ...(selectedBoundaryFeature ? [selectedBoundaryFeature] : [])
   ]);
   const analysisBounds = featureBounds(analysisGeojson?.features || []);
-
-  /*
-   * Camera policy:
-   *
-   * 1. Initial CSV load / automatic boundary resolution:
-   *    fit ONLY the complete point set. Administrative boundary loading must
-   *    never make the sampling points tiny.
-   *
-   * 2. Clicking a CSV layer:
-   *    fit ONLY that layer's points.
-   *
-   * 3. Clicking/uploading a custom boundary:
-   *    fit the selected boundary. If it contains the sampling points, include
-   *    the points naturally in that extent; otherwise keep the boundary as the
-   *    explicit target rather than letting an unrelated permanent boundary
-   *    control the camera.
-   *
-   * 4. Interpolation:
-   *    include the generated surface only when there is no explicit layer or
-   *    boundary focus request.
-   */
   const bounds = new LngLatBounds();
 
+  // Camera is changed only by an initial data load or an explicit user
+  // action. Automatic boundary matching never reaches this function as a
+  // camera trigger, so it cannot re-zoom the sampling sites later.
   if (focusTarget?.type === "boundary" && boundaryBounds && !boundaryBounds.isEmpty()) {
+    // A boundary click/upload is an explicit request: show the uploaded
+    // boundary AND the sampling points in the canvas so the boundary can
+    // never be silently off-screen.
     bounds.extend(boundaryBounds);
-    if (pointBounds && !pointBounds.isEmpty()) {
-      // Keep sampling points visible when they fall inside the selected
-      // boundary, but do not expand an unrelated boundary to include them.
-      const boundaryFeature =
-        selectedBoundaryFeature ||
-        (boundaryFeatures || [])[0] ||
-        null;
-      const pointsInside =
-        boundaryFeature &&
-        points.length > 0 &&
-        points.every((point) =>
-          featureContainsPoint(
-            boundaryFeature,
-            point?.geometry?.coordinates
-          )
-        );
-
-      if (pointsInside) bounds.extend(pointBounds);
-    }
+    if (pointBounds && !pointBounds.isEmpty()) bounds.extend(pointBounds);
+  } else if (focusTarget?.type === "layer") {
+    // Clicking a project layer always means "zoom to this layer".
+    if (pointBounds && !pointBounds.isEmpty()) bounds.extend(pointBounds);
   } else if (pointBounds && !pointBounds.isEmpty()) {
-    // This is the important default: CSV extent is authoritative.
+    // Default/initial view: the complete CSV point set is authoritative.
     bounds.extend(pointBounds);
 
     if (
-      !focusTarget &&
       mapModeForFit === "interpolation" &&
       analysisBounds &&
       !analysisBounds.isEmpty()
     ) {
       bounds.extend(analysisBounds);
     }
+  } else if (boundaryBounds && !boundaryBounds.isEmpty()) {
+    bounds.extend(boundaryBounds);
   }
 
   if (bounds.isEmpty()) return;
@@ -247,8 +218,6 @@ function fitToMapExtent(
   if (samePoint) {
     map.easeTo({
       center: [sw.lng, sw.lat],
-      // Close enough to see the sampling site without making a single point
-      // fill the entire canvas.
       zoom: 15.5,
       duration
     });
@@ -257,12 +226,11 @@ function fitToMapExtent(
 
   map.fitBounds(bounds, {
     padding: { top: 70, bottom: 70, left: 70, right: 70 },
-    // Do not over-zoom a compact point cluster. fitBounds still guarantees
-    // every point remains visible.
     maxZoom: 16.5,
     duration
   });
 }
+
 function markerElement(size) {
   const el = document.createElement("div");
   const px = Math.max(10, Number(size || 6) * 2);
@@ -319,8 +287,8 @@ function addBoundary(map, boundary, selected) {
     // source is not a Polygon/MultiPolygon FeatureCollection.
     paint: {
       "line-color": selected ? "#087f5b" : "#65756e",
-      "line-width": selected ? 2.5 : 0.65,
-      "line-opacity": selected ? 0.95 : 0.55
+      "line-width": selected ? 3 : 1.4,
+      "line-opacity": selected ? 1 : 0.8
     }
   });
 }
