@@ -7371,88 +7371,87 @@ function ScrollToTop() {
 
   return null;
 }
+
 export default function App() {
   return (
-   <>
-    <ScrollToTop />
-    <Routes>
-      <Route
-        path="/"
-        element={<Home />}
-      />
+    <>
+      <ScrollToTop />
 
-      <Route
-        path="/store"
-        element={<Store />}
-      />
+      <Routes>
+        <Route
+          path="/"
+          element={<Home />}
+        />
 
-      <Route
-        path="/categories"
-        element={<CategoriesPage />}
-      />
+        <Route
+          path="/store"
+          element={<Store />}
+        />
 
-      <Route
-        path="/categories/:slug"
-        element={<CategoryPage />}
-      />
+        <Route
+          path="/categories"
+          element={<CategoriesPage />}
+        />
 
-      <Route
-        path="/dataset/:id"
-        element={<DatasetRoute />}
-      />
+        <Route
+          path="/categories/:slug"
+          element={<CategoryPage />}
+        />
 
-      <Route
-        path="/explore"
-        element={<Explore />}
-      />
-      <Route
-        path="/studio"
-        element={<StudioPage />}
-      />
-      <Route
-        path="/contact"
-        element={<ContactPage />}
-      />
+        <Route
+          path="/dataset/:id"
+          element={<DatasetRoute />}
+        />
 
-      <Route
-        path="/dashboard"
-        element={<Dashboard />}
-      />
+        <Route
+          path="/explore"
+          element={<Explore />}
+        />
 
-      <Route
-        path="/login"
-        element={<Login />}
-      />
+        <Route
+          path="/studio"
+          element={<StudioPage />}
+        />
 
-      <Route
-        path="/cart"
-        element={<Cart />}
-      />
+        <Route
+          path="/contact"
+          element={<ContactPage />}
+        />
 
-      <Route
-        path="/checkout"
-        element={<Checkout />}
-      />
+        <Route
+          path="/dashboard"
+          element={<Dashboard />}
+        />
 
-      <Route
-        path="/admin"
-        element={
-          <AdminDashboard />
-        }
-      />
+        <Route
+          path="/login"
+          element={<Login />}
+        />
 
-      <Route
-        path="/admin/upload"
-        element={
-          <AdminUpload />
-        }
-      />
+        <Route
+          path="/cart"
+          element={<Cart />}
+        />
 
-      <Route
-        path="*"
-        element={<Home />}
-      />
-        </Route>
+        <Route
+          path="/checkout"
+          element={<Checkout />}
+        />
+
+        <Route
+          path="/admin"
+          element={<AdminDashboard />}
+        />
+
+        <Route
+          path="/admin/upload"
+          element={<AdminUpload />}
+        />
+
+        <Route
+          path="*"
+          element={<Home />}
+        />
       </Routes>
     </>
   );
