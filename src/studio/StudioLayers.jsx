@@ -6,7 +6,8 @@ export default function StudioLayers({
   boundaries = [],
   activeLayerId,
   onSelect,
-  onRemove
+  onRemove,
+  onRemoveBoundary
 }) {
   const projectBoundaries = (boundaries || []).filter(
     (boundary) => boundary?.sourceType === "upload"
@@ -41,6 +42,15 @@ export default function StudioLayers({
                 <strong><MapPinned size={16} /> {boundary.name}</strong>
                 <span>{boundary.level} · {boundary.geojson?.features?.length || 0} features</span>
               </div>
+              <button
+                type="button"
+                className="icon-btn"
+                title="Remove boundary"
+                aria-label={`Remove boundary ${boundary.name}`}
+                onClick={() => onRemoveBoundary?.(boundary.id)}
+              >
+                <Trash2 size={16} />
+              </button>
             </div>
           ))}
         </div>

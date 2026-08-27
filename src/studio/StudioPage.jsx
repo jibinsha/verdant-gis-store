@@ -13,38 +13,22 @@ import { getPermanentBoundaryResolution } from "./boundaryApi";
 function combineBoundaryFeatures(boundary) {
   const features = boundary?.geojson?.features || [];
   if (!features.length) return null;
-
-  if (features.length === 1) {
-    return features[0];
-  }
+  if (features.length === 1) return features[0];
 
   const polygonParts = [];
-
-  features.forEach((feature) => {
+  for (const feature of features) {
     const geometry = feature?.geometry;
-    if (!geometry) return;
-
-    if (geometry.type === "Polygon") {
-      polygonParts.push(geometry.coordinates);
-    } else if (geometry.type === "MultiPolygon") {
-      polygonParts.push(...geometry.coordinates);
-    }
-  });
-
-  if (!polygonParts.length) {
-    return features[0];
+    if (!geometry) continue;
+    if (geometry.type === "Polygon") polygonParts.push(geometry.coordinates);
+    else if (geometry.type === "MultiPolygon") polygonParts.push(...geometry.coordinates);
   }
+
+  if (!polygonParts.length) return features[0];
 
   return {
     type: "Feature",
-    properties: {
-      ...(features[0]?.properties || {}),
-      name: boundary.name
-    },
-    geometry: {
-      type: "MultiPolygon",
-      coordinates: polygonParts
-    }
+    properties: { ...(features[0]?.properties || {}), name: boundary.name },
+    geometry: { type: "MultiPolygon", coordinates: polygonParts }
   };
 }
 
@@ -63,9 +47,8 @@ export default function StudioPage() {
   );
 
   const detected = useMemo(() => {
-    if (!activeLayer) return {};
-
     const find = (level) => {
+      if (!activeLayer) return null;
       const source = boundaries.filter((boundary) => boundary.level === level);
 
       for (const boundary of source) {
@@ -83,49 +66,45 @@ export default function StudioPage() {
     };
 
     const customBoundary = boundaries.find(
-      (item) => item.sourceType === "upload" && item.level === "custom"
-    );
+      (boundary) =>
+        boundary?.sourceType === "upload" &&
+        boundary?.level === "custom"
+    ) || null;
 
-    // Uploaded custom boundaries are project layers in their own right.
-    // Keep the whole uploaded geometry available for the map/layout even
-    // when the sampling points do not fall inside the boundary.
     const customFeature = customBoundary
-      ? detectBoundaryFeature(
-          customBoundary,
-          activeLayer.geojson?.features || []
-        ) || combineBoundaryFeatures(customBoundary)
+      ? combineBoundaryFeatures(customBoundary)
       : null;
 
+    const country = find("country");
+    const state = find("state");
+    const district = find("district");
+    const village = find("village");
+
     return {
-      country: find("country"),
-      state: find("state"),
-      district: find("district"),
-      village: find("village"),
+      country,
+      state,
+      district,
+      village,
       custom: customBoundary
-        ? {
-            boundary: customBoundary,
-            feature: customFeature
-          }
+        ? { boundary: customBoundary, feature: customFeature }
         : null,
 
-      countryBoundary: find("country")?.boundary || null,
-      countryFeature: find("country")?.feature || null,
-      stateBoundary: find("state")?.boundary || null,
-      stateFeature: find("state")?.feature || null,
-      districtBoundary: find("district")?.boundary || null,
-      districtFeature: find("district")?.feature || null,
-      villageBoundary: find("village")?.boundary || null,
-      villageFeature: find("village")?.feature || null,
-      customBoundary: customBoundary || null,
-      customFeature: customFeature || null,
-      countryInsetGeojson: find("country")?.boundary?.insetGeojson || null,
-      stateInsetGeojson: find("state")?.boundary?.insetGeojson || null
+      countryBoundary: country?.boundary || null,
+      countryFeature: country?.feature || null,
+      stateBoundary: state?.boundary || null,
+      stateFeature: state?.feature || null,
+      districtBoundary: district?.boundary || null,
+      districtFeature: district?.feature || null,
+      villageBoundary: village?.boundary || null,
+      villageFeature: village?.feature || null,
+      customBoundary,
+      customFeature,
+      countryInsetGeojson: country?.boundary?.insetGeojson || null,
+      stateInsetGeojson: state?.boundary?.insetGeojson || null
     };
   }, [activeLayer, boundaries]);
 
   const mainDetected = useMemo(() => {
-    if (!activeLayer) return null;
-
     // A customer-uploaded custom boundary always takes precedence.
     if (detected.custom?.boundary && detected.custom?.feature) {
       return {
@@ -240,6 +219,10 @@ export default function StudioPage() {
     setBoundaries((current) => [...current, boundary]);
   }
 
+  function removeBoundary(id) {
+    setBoundaries((current) => current.filter((boundary) => boundary.id !== id));
+  }
+
   function openLayout() {
     if (!activeLayer) {
       window.alert("Upload a coordinate CSV first.");
@@ -305,7 +288,6 @@ export default function StudioPage() {
 
           <StudioLayers
             layers={layers}
-            boundaries={boundaries}
             activeLayerId={activeLayerId}
             onSelect={(id) => {
               setActiveLayerId(id);
@@ -313,6 +295,7 @@ export default function StudioPage() {
               setMapMode("location");
             }}
             onRemove={removeLayer}
+            onRemoveBoundary={removeBoundary}
           />
 
           {boundaries.length > 0 && (
@@ -346,7 +329,6 @@ export default function StudioPage() {
             mapMode={mapMode}
             selectedBoundaryId={mainDetected?.boundary?.id || ""}
             selectedBoundaryFeature={mainDetected?.feature || null}
-            selectedBoundaryIsCustom={mainDetected?.level === "custom"}
             activeLayerId={activeLayerId}
           />
         </main>
@@ -425,11 +407,7 @@ export default function StudioPage() {
         layers={layers}
         activeLayer={activeLayer}
         boundaries={boundaries}
-        detected={{
-          ...detected,
-          mainFeature: mainDetected?.feature || null,
-          mainBoundaryLevel: mainDetected?.level || null
-        }}
+        detected={{ ...detected, mainFeature: mainDetected?.feature || null }}
         analysisResult={analysisResult}
       />
     </div>
