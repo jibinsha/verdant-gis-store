@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link, Route, Routes, useSearchParams } from "react-router-dom";
+import { Link, Route, Routes, useSearchParams, useLocation } from "react-router-dom";
 import {
   ArrowRight,
   Database,
@@ -72,7 +72,23 @@ import {
   CircleMarker,
   Tooltip,
   useMap,
-} from "react-leaflet";/* =========================================================
+} from "react-leaflet";
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
+  }, [pathname]);
+
+  return null;
+}
+
+/* =========================================================
    MAP HELPERS
 
 
