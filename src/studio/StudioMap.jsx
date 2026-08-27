@@ -666,10 +666,13 @@ export default function StudioMap({
     if (!map) return;
 
     if (lastFocusRequestRef.current === focusRequest) return;
-    lastFocusRequestRef.current = focusRequest;
 
     // Resolve the layer/boundary from the explicit focus request rather than
     // relying on whichever state update happens to win the render race.
+    // When a CSV is deleted and a new one is immediately uploaded, React can
+    // briefly run this effect before the new layer has reached `layers`. Do
+    // not consume the focus request during that transient state; the effect
+    // will run again when the new layer is committed.
     const targetLayer =
       focusTarget?.type === "layer"
         ? (layers || []).find((layer) => layer?.id === focusTarget.id)
@@ -686,6 +689,14 @@ export default function StudioMap({
     const boundaryFeatures = targetBoundary
       ? (targetBoundary.geojson?.features || [])
       : [];
+
+    // Never mark a new dataset focus as handled until its geometry is
+    // actually available. This makes replacing/deleting and re-uploading
+    // datasets reliably trigger the new dataset zoom.
+    if (focusTarget?.type === "layer" && (!targetLayer || !points.length)) return;
+    if (focusTarget?.type === "boundary" && !targetBoundary) return;
+
+    lastFocusRequestRef.current = focusRequest;
 
     const focus = () => {
       if (!mapRef.current || !map.isStyleLoaded()) return;
