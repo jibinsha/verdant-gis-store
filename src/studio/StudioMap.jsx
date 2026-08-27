@@ -221,15 +221,15 @@ function fitToMapExtent(
   if (samePoint) {
     map.easeTo({
       center: [sw.lng, sw.lat],
-      zoom: 16,
+      zoom: 17.5,
       duration
     });
     return;
   }
 
   map.fitBounds(bounds, {
-    padding: { top: 55, bottom: 55, left: 55, right: 55 },
-    maxZoom: 17,
+    padding: { top: 32, bottom: 32, left: 32, right: 32 },
+    maxZoom: 18,
     duration
   });
 }
@@ -468,32 +468,8 @@ export default function StudioMap({
       });
     }
 
-    const fitCurrentExtent = () => {
-      fitToMapExtent(map, {
-        points,
-        selectedBoundaryFeature,
-        boundaryFeatures: uploadedBoundaryFeatures,
-        analysisGeojson:
-          mapMode === "interpolation"
-            ? analysisResult?.geojson
-            : null,
-        duration: 450
-      });
-    };
-
-    // Cancel any previous camera animation before fitting the new dataset.
-    // Fit immediately, then again after MapLibre has painted the new source.
-    // This is important when one CSV is deleted and another is uploaded
-    // without refreshing the Studio page.
-    map.stop();
-    fitCurrentExtent();
-    fitListenerRef.current = fitCurrentExtent;
-    map.once("idle", fitCurrentExtent);
-    fitTimeoutsRef.current = [
-      window.setTimeout(fitCurrentExtent, 120),
-      window.setTimeout(fitCurrentExtent, 350)
-    ];
   }
+
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) {
@@ -636,6 +612,70 @@ export default function StudioMap({
     selectedBoundaryFeature,
     activeLayerId,
     focusRequest
+  ]);
+
+  // Camera fitting is intentionally separated from rendering. Permanent
+  // boundary detection is asynchronous; when it arrives we must redraw the
+  // boundary without stealing the camera away from the already-correct CSV
+  // point extent. Camera changes happen only for an actual dataset/analysis
+  // change or an explicit layer-focus request.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const activeLayer = (layers || []).find(
+      (layer) => layer?.id === activeLayerId
+    );
+    const points = getPointFeatures(
+      activeLayer ? [activeLayer] : []
+    );
+    const uploadedBoundaryFeatures = (boundaries || [])
+      .filter((boundary) => boundary?.sourceType === "upload")
+      .flatMap((boundary) => boundary?.geojson?.features || []);
+
+    const fitCurrentExtent = () => {
+      if (!mapRef.current || !map.isStyleLoaded()) return;
+
+      fitToMapExtent(map, {
+        points,
+        selectedBoundaryFeature,
+        boundaryFeatures: uploadedBoundaryFeatures,
+        analysisGeojson:
+          mapMode === "interpolation"
+            ? analysisResult?.geojson
+            : null,
+        duration: 450
+      });
+    };
+
+    const scheduleFit = () => {
+      map.stop();
+      fitCurrentExtent();
+
+      // One delayed fit is enough to handle a newly painted raster/source
+      // without repeatedly re-fitting when automatic boundaries arrive.
+      const timeoutId = window.setTimeout(fitCurrentExtent, 120);
+      fitTimeoutsRef.current.push(timeoutId);
+    };
+
+    if (map.isStyleLoaded()) {
+      scheduleFit();
+    } else {
+      map.once("load", scheduleFit);
+    }
+
+    return () => {
+      map.off("load", scheduleFit);
+      fitTimeoutsRef.current.forEach((timeoutId) =>
+        window.clearTimeout(timeoutId)
+      );
+      fitTimeoutsRef.current = [];
+    };
+  }, [
+    activeLayerId,
+    focusRequest,
+    mapMode,
+    analysisResult
   ]);
 
   return (

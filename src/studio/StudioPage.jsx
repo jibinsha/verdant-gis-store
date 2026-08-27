@@ -244,6 +244,7 @@ export default function StudioPage() {
     ]);
     setAnalysisResult(null);
     setMapMode("location");
+    setFocusRequest((value) => value + 1);
   }
 
   function handleRemoveBoundary(id) {
@@ -252,6 +253,7 @@ export default function StudioPage() {
     );
     setAnalysisResult(null);
     setMapMode("location");
+    setFocusRequest((value) => value + 1);
   }
 
   function openLayout() {
