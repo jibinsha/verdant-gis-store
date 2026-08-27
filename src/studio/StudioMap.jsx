@@ -320,7 +320,6 @@ export default function StudioMap({
   // Tracks the last explicit layer/boundary focus request so rendering or
   // automatic boundary updates cannot accidentally repeat the camera move.
   const lastFocusRequestRef = useRef(null);
-  const lastFocusedLayerIdRef = useRef(null);
 
   function removeMarkers() {
     markersRef.current.forEach((marker) => {
@@ -445,8 +444,6 @@ export default function StudioMap({
           ]
         }
       });
-      // Make the freshly-created interpolation layer repaint immediately.
-      map.triggerRepaint();
     }
 
     // Keep sampling points as DOM markers. This is deliberately retained
@@ -624,91 +621,115 @@ export default function StudioMap({
     focusRequest
   ]);
 
-  // Camera fitting is deliberately separated from rendering and from the
-  // automatic boundary-resolution state. Automatic boundary data must never
-  // steal the viewport from the sampling points.
+  // Camera fitting is controlled only by explicit canvas events:
+  // 1) a dataset/layer is uploaded or selected,
+  // 2) a boundary is explicitly selected,
+  // 3) the user removes a boundary and we explicitly return to the active CSV.
+  //
+  // Automatic study-area detection, interpolation rendering, and other
+  // state changes must never take control of the viewport.
+
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !focusRequest) return;
 
-    // Every change of active dataset is a fresh camera target. This remains
-    // true even when the previous dataset was deleted immediately beforehand.
-    const isNewActiveLayer =
-      Boolean(activeLayerId) &&
-      lastFocusedLayerIdRef.current !== activeLayerId;
+    let cancelled = false;
+    let frame = null;
 
-    if (
-      !isNewActiveLayer &&
-      lastFocusRequestRef.current === focusRequest
-    ) {
-      return;
-    }
+    const runFocus = () => {
+      if (cancelled || !mapRef.current || !map.isStyleLoaded()) return;
 
-    const targetLayer =
-      focusTarget?.type === "layer"
-        ? (layers || []).find((layer) => layer?.id === focusTarget.id)
-        : (layers || []).find((layer) => layer?.id === activeLayerId);
+      let targetLayer = null;
+      let targetBoundary = null;
 
-    const points = getPointFeatures(targetLayer ? [targetLayer] : []);
+      if (focusTarget?.type === "boundary") {
+        targetBoundary = (boundaries || []).find(
+          (boundary) => boundary?.id === focusTarget.id
+        );
+      } else {
+        targetLayer =
+          (layers || []).find(
+            (layer) => layer?.id === focusTarget?.id
+          ) ||
+          (layers || []).find(
+            (layer) => layer?.id === activeLayerId
+          );
+      }
 
-    const targetBoundary =
-      focusTarget?.type === "boundary"
-        ? (boundaries || []).find(
-            (boundary) => boundary?.id === focusTarget.id
-          )
-        : null;
+      const points = getPointFeatures(
+        targetLayer ? [targetLayer] : []
+      );
 
-    const boundaryFeatures = targetBoundary
-      ? (targetBoundary.geojson?.features || [])
-      : [];
+      // Do not consume a layer focus request until the newly uploaded
+      // dataset actually exists and contains valid point geometry. This is
+      // what makes delete -> upload-new-dataset reliably re-zoom.
+      if (focusTarget?.type === "layer") {
+        if (!targetLayer || !points.length) {
+          frame = requestAnimationFrame(runFocus);
+          return;
+        }
+      }
 
-    // Do not consume the request until the new dataset geometry actually
-    // exists. This handles delete -> upload replacement races.
-    if (focusTarget?.type === "layer" && (!targetLayer || !points.length)) {
-      return;
-    }
-    if (focusTarget?.type === "boundary" && !targetBoundary) return;
-    if (!focusTarget && (!targetLayer || !points.length)) return;
+      if (focusTarget?.type === "boundary") {
+        if (!targetBoundary) {
+          frame = requestAnimationFrame(runFocus);
+          return;
+        }
+      }
 
-    lastFocusRequestRef.current = focusRequest;
-    if (activeLayerId) {
-      lastFocusedLayerIdRef.current = activeLayerId;
-    }
+      if (focusTarget?.type === "boundary") {
+        const boundaryFeatures =
+          targetBoundary.geojson?.features || [];
 
-    const focus = () => {
-      if (!mapRef.current || !map.isStyleLoaded()) return;
+        fitToMapExtent(map, {
+          points,
+          selectedBoundaryFeature: null,
+          boundaryFeatures,
+          analysisGeojson: null,
+          mapModeForFit: "location",
+          focusTarget,
+          duration: 500
+        });
+      } else {
+        // Dataset/layer focus is intentionally point-only. The automatic
+        // study-area boundary must never make a newly uploaded CSV zoom out.
+        fitToMapExtent(map, {
+          points,
+          selectedBoundaryFeature: null,
+          boundaryFeatures: [],
+          analysisGeojson: null,
+          mapModeForFit: "location",
+          focusTarget: { type: "layer" },
+          duration: 500
+        });
+      }
+    };
 
+    const start = () => {
+      if (cancelled) return;
       map.stop();
-
-      fitToMapExtent(map, {
-        points,
-        selectedBoundaryFeature:
-          focusTarget?.type === "boundary"
-            ? selectedBoundaryFeature
-            : null,
-        boundaryFeatures,
-        analysisGeojson: null,
-        mapModeForFit: "location",
-        focusTarget,
-        duration: 500
-      });
+      frame = requestAnimationFrame(runFocus);
     };
 
     if (map.isStyleLoaded()) {
-      const frame = requestAnimationFrame(focus);
-      return () => cancelAnimationFrame(frame);
+      start();
+    } else {
+      map.once("load", start);
     }
 
-    map.once("load", focus);
-    return () => map.off("load", focus);
+    return () => {
+      cancelled = true;
+      if (frame) cancelAnimationFrame(frame);
+      map.off("load", start);
+    };
   }, [
     focusRequest,
     focusTarget,
     activeLayerId,
     layers,
-    boundaries,
-    selectedBoundaryFeature
+    boundaries
   ]);
+
 
   return (
     <div
