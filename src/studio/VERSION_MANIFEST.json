@@ -1,6 +1,6 @@
 {
-  "version": "V26.1",
-  "purpose": "GIS Store Studio V26.1: stable camera focus and custom-boundary publication rendering",
+  "version": "V26.2",
+  "purpose": "GIS Store Studio V26.2: SVG publication rendering fix for custom boundaries and IDW cells",
   "reference_version": "V4.2",
   "files": [
     "README.md",
@@ -46,6 +46,7 @@
     "Location layout keeps point-only extent for unrelated custom boundaries and uses boundary + points when all points are inside.",
     "Fixed custom boundary visibility in the A4 main layout when all sampling points are inside.",
     "Prevented automatic boundary data changes from re-zooming the map canvas.",
-    "Strengthened project-layer click-to-zoom handling and removed a duplicate focus-state update."
+    "Strengthened project-layer click-to-zoom handling and removed a duplicate focus-state update.",
+    "Fixed invalid SVG path data that prevented custom boundaries and IDW interpolation cells from rendering in the Map Layout main frame; transforms are now applied via SVG transform attributes."
   ]
 }

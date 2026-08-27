@@ -695,7 +695,8 @@ function MainMap({
             return (
               <path
                 key={`cell-${index}`}
-                d={`translate(${plotX} ${plotY}) ${cellPath}`}
+                d={cellPath}
+                transform={`translate(${plotX} ${plotY})`}
                 fill={cellColor(
                   value,
                   minValue,
@@ -714,7 +715,8 @@ function MainMap({
         mainBoundaryFeature &&
         boundaryPath && (
           <path
-            d={`translate(${plotX} ${plotY}) ${boundaryPath}`}
+            d={boundaryPath}
+            transform={`translate(${plotX} ${plotY})`}
             fill="#f7f8f7"
             fillRule="evenodd"
             stroke={
@@ -733,7 +735,8 @@ function MainMap({
         boundaryPath &&
         showBoundary && (
           <path
-            d={`translate(${plotX} ${plotY}) ${boundaryPath}`}
+            d={boundaryPath}
+            transform={`translate(${plotX} ${plotY})`}
             fill="none"
             stroke="#4b5651"
             strokeWidth="1.15"
