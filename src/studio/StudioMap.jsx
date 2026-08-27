@@ -320,6 +320,7 @@ export default function StudioMap({
   // Tracks the last explicit layer/boundary focus request so rendering or
   // automatic boundary updates cannot accidentally repeat the camera move.
   const lastFocusRequestRef = useRef(null);
+  const lastFocusedLayerIdRef = useRef(null);
 
   function removeMarkers() {
     markersRef.current.forEach((marker) => {
@@ -444,6 +445,8 @@ export default function StudioMap({
           ]
         }
       });
+      // Make the freshly-created interpolation layer repaint immediately.
+      map.triggerRepaint();
     }
 
     // Keep sampling points as DOM markers. This is deliberately retained
@@ -623,60 +626,29 @@ export default function StudioMap({
 
   // Camera fitting is deliberately separated from rendering and from the
   // automatic boundary-resolution state. Automatic boundary data must never
-  // steal the viewport from the sampling points. Layer selection/upload and
-  // boundary selection are handled by the explicit focus effect below.
+  // steal the viewport from the sampling points.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    const fit = () => {
-      if (!mapRef.current || !map.isStyleLoaded()) return;
+    // Every change of active dataset is a fresh camera target. This remains
+    // true even when the previous dataset was deleted immediately beforehand.
+    const isNewActiveLayer =
+      Boolean(activeLayerId) &&
+      lastFocusedLayerIdRef.current !== activeLayerId;
 
-      const activeLayer = (layers || []).find(
-        (layer) => layer?.id === activeLayerId
-      );
-      const points = getPointFeatures(activeLayer ? [activeLayer] : []);
-
-      map.stop();
-      fitToMapExtent(map, {
-        points,
-        selectedBoundaryFeature,
-        boundaryFeatures: [],
-        analysisGeojson:
-          mapMode === "interpolation"
-            ? analysisResult?.geojson
-            : null,
-        mapModeForFit: mapMode,
-        focusTarget: null,
-        duration: 450
-      });
-    };
-
-    if (map.isStyleLoaded()) {
-      fit();
-    } else {
-      map.once("load", fit);
+    if (
+      !isNewActiveLayer &&
+      lastFocusRequestRef.current === focusRequest
+    ) {
+      return;
     }
 
-    return () => map.off("load", fit);
-  }, [mapMode, analysisResult]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    if (lastFocusRequestRef.current === focusRequest) return;
-
-    // Resolve the layer/boundary from the explicit focus request rather than
-    // relying on whichever state update happens to win the render race.
-    // When a CSV is deleted and a new one is immediately uploaded, React can
-    // briefly run this effect before the new layer has reached `layers`. Do
-    // not consume the focus request during that transient state; the effect
-    // will run again when the new layer is committed.
     const targetLayer =
       focusTarget?.type === "layer"
         ? (layers || []).find((layer) => layer?.id === focusTarget.id)
         : (layers || []).find((layer) => layer?.id === activeLayerId);
+
     const points = getPointFeatures(targetLayer ? [targetLayer] : []);
 
     const targetBoundary =
@@ -690,13 +662,18 @@ export default function StudioMap({
       ? (targetBoundary.geojson?.features || [])
       : [];
 
-    // Never mark a new dataset focus as handled until its geometry is
-    // actually available. This makes replacing/deleting and re-uploading
-    // datasets reliably trigger the new dataset zoom.
-    if (focusTarget?.type === "layer" && (!targetLayer || !points.length)) return;
+    // Do not consume the request until the new dataset geometry actually
+    // exists. This handles delete -> upload replacement races.
+    if (focusTarget?.type === "layer" && (!targetLayer || !points.length)) {
+      return;
+    }
     if (focusTarget?.type === "boundary" && !targetBoundary) return;
+    if (!focusTarget && (!targetLayer || !points.length)) return;
 
     lastFocusRequestRef.current = focusRequest;
+    if (activeLayerId) {
+      lastFocusedLayerIdRef.current = activeLayerId;
+    }
 
     const focus = () => {
       if (!mapRef.current || !map.isStyleLoaded()) return;
@@ -718,8 +695,6 @@ export default function StudioMap({
     };
 
     if (map.isStyleLoaded()) {
-      // Run after the current render so newly selected/uploaded features are
-      // already present in the map before the camera is fitted.
       const frame = requestAnimationFrame(focus);
       return () => cancelAnimationFrame(frame);
     }
