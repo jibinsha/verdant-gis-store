@@ -164,13 +164,15 @@ function fitToMapExtent(
   {
     points = [],
     selectedBoundaryFeature = null,
+    boundaryFeatures = [],
     analysisGeojson = null,
     duration = 550
   }
 ) {
-  const boundaryBounds = featureBounds(
-    selectedBoundaryFeature ? [selectedBoundaryFeature] : []
-  );
+  const boundaryBounds = featureBounds([
+    ...(boundaryFeatures || []),
+    ...(selectedBoundaryFeature ? [selectedBoundaryFeature] : [])
+  ]);
   const analysisBounds = featureBounds(analysisGeojson?.features || []);
   const pointBounds = featureBounds(points);
 
@@ -264,11 +266,9 @@ function addBoundary(map, boundary, selected) {
     id: lineId,
     type: "line",
     source: sourceId,
-    filter: [
-      "any",
-      ["==", ["geometry-type"], "Polygon"],
-      ["==", ["geometry-type"], "MultiPolygon"]
-    ],
+    // A line layer can draw polygon outlines as well as LineString
+    // boundaries, so uploaded boundary files remain visible even when the
+    // source is not a Polygon/MultiPolygon FeatureCollection.
     paint: {
       "line-color": selected ? "#087f5b" : "#65756e",
       "line-width": selected ? 2.5 : 0.65,
@@ -336,9 +336,14 @@ export default function StudioMap({
       addBoundary(
         map,
         boundary,
-        boundary.id === selectedBoundaryId
+        boundary.id === selectedBoundaryId ||
+          boundary?.sourceType === "upload"
       );
     });
+
+    const uploadedBoundaryFeatures = (boundaries || [])
+      .filter((boundary) => boundary?.sourceType === "upload")
+      .flatMap((boundary) => boundary?.geojson?.features || []);
 
     // Publication-style IDW surface.
     if (
@@ -447,6 +452,7 @@ export default function StudioMap({
       fitToMapExtent(map, {
         points,
         selectedBoundaryFeature,
+        boundaryFeatures: uploadedBoundaryFeatures,
         analysisGeojson:
           mapMode === "interpolation"
             ? analysisResult?.geojson

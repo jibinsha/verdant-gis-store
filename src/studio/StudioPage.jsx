@@ -237,11 +237,20 @@ export default function StudioPage() {
   }
 
   function addBoundary(boundary) {
-    setBoundaries((current) => [...current, boundary]);
+    setBoundaries((current) => [
+      ...current.filter((item) => item.sourceType !== "upload"),
+      boundary
+    ]);
+    setAnalysisResult(null);
+    setMapMode("location");
   }
 
-  function removeBoundary(id) {
-    setBoundaries((current) => current.filter((boundary) => boundary.id !== id));
+  function handleRemoveBoundary(id) {
+    setBoundaries((current) =>
+      current.filter((boundary) => boundary.id !== id)
+    );
+    setAnalysisResult(null);
+    setMapMode("location");
   }
 
   function openLayout() {
@@ -317,7 +326,7 @@ export default function StudioPage() {
               setMapMode("location");
             }}
             onRemove={removeLayer}
-            onRemoveBoundary={removeBoundary}
+            onRemoveBoundary={handleRemoveBoundary}
           />
 
           {boundaries.length > 0 && (

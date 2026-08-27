@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Download, X } from "lucide-react";
-import { bboxOfFeatures } from "./spatial";
+import { bboxOfFeatures, featureContainsPoint } from "./spatial";
 
 const A4_W = 1123;
 const A4_H = 794;
@@ -389,6 +389,51 @@ function InsetMap({
   );
 }
 
+function BoundaryOverview({ boundaryFeature, x, y, width = 150, height = 105 }) {
+  if (!boundaryFeature) return null;
+
+  const bbox = bboxFrom([boundaryFeature]);
+  if (!bbox) return null;
+
+  const overviewBbox = aspectFitBbox(bbox, width / height, 0.08);
+  const project = projectionFor(overviewBbox, width - 16, height - 24);
+  const path = geometryPath(boundaryFeature.geometry, project);
+
+  return (
+    <g transform={`translate(${x} ${y})`} aria-label="Boundary overview">
+      <rect
+        width={width}
+        height={height}
+        rx="2"
+        fill="#fff"
+        fillOpacity="0.96"
+        stroke="#68736e"
+        strokeWidth="0.8"
+      />
+      <text
+        x="8"
+        y="14"
+        fontSize="8.5"
+        fontWeight="700"
+        fill="#35423d"
+      >
+        Boundary overview
+      </text>
+      {path && (
+        <path
+          d={path}
+          transform="translate(8 20)"
+          fill="#dfece6"
+          fillOpacity="0.75"
+          stroke="#087f5b"
+          strokeWidth="1.1"
+          fillRule="evenodd"
+        />
+      )}
+    </g>
+  );
+}
+
 function MainMap({
   x,
   y,
@@ -412,14 +457,69 @@ function MainMap({
   const hasInterpolation =
     cells?.length > 0 && Boolean(valueField);
 
-  // The publication map should be centred on the sampling locations.
-  // Boundaries and interpolation cells are visual/clip layers and must not
-  // pull the map extent away from the actual study points.
-  const extentFeatures = [
-    ...(points || []),
-    ...(boundaryFeature ? [boundaryFeature] : []),
-    ...(cells || [])
-  ];
+  const boundaryContainsPoints = Boolean(
+    boundaryFeature &&
+      (points || []).some((point) =>
+        featureContainsPoint(
+          boundaryFeature,
+          point?.geometry?.coordinates
+        )
+      )
+  );
+
+  /*
+   * Publication extent logic:
+   * - If the boundary contains at least one point, keep the boundary and
+   *   sampling locations together when the boundary is reasonably local.
+   * - If the boundary is geographically separate from the points, do NOT let
+   *   that boundary make the sampling map zoom out to an unreadable scale.
+   *   The main frame focuses on all points and a small boundary overview is
+   *   rendered below.
+   * - A very large administrative boundary is treated the same way. This
+   *   prevents a country-sized boundary from making six local points tiny.
+   */
+  const pointBbox = bboxFrom([], points);
+  const boundaryBbox = boundaryFeature
+    ? bboxFrom([boundaryFeature])
+    : null;
+
+  const pointWidth = pointBbox
+    ? Math.max(pointBbox[2] - pointBbox[0], 0.000001)
+    : null;
+  const pointHeight = pointBbox
+    ? Math.max(pointBbox[3] - pointBbox[1], 0.000001)
+    : null;
+  const boundaryWidth = boundaryBbox
+    ? Math.max(boundaryBbox[2] - boundaryBbox[0], 0.000001)
+    : null;
+  const boundaryHeight = boundaryBbox
+    ? Math.max(boundaryBbox[3] - boundaryBbox[1], 0.000001)
+    : null;
+
+  const boundaryAreaRatio =
+    pointWidth &&
+    pointHeight &&
+    boundaryWidth &&
+    boundaryHeight
+      ? (boundaryWidth * boundaryHeight) /
+        (pointWidth * pointHeight)
+      : 1;
+
+  const focusPoints =
+    Boolean(points?.length) &&
+    Boolean(boundaryFeature) &&
+    (!boundaryContainsPoints || boundaryAreaRatio > 80);
+
+  const extentFeatures = focusPoints
+    ? [
+        ...(points || []),
+        ...(cells || [])
+      ]
+    : [
+        ...(points || []),
+        ...(boundaryFeature ? [boundaryFeature] : []),
+        ...(cells || [])
+      ];
 
   const rawBbox = bboxFrom(
     extentFeatures,
@@ -646,6 +746,16 @@ function MainMap({
             fillRule="evenodd"
           />
         )}
+
+      {showBoundary && focusPoints && (
+        <BoundaryOverview
+          boundaryFeature={boundaryFeature}
+          x={plotX + 14}
+          y={plotY + plotH - 126}
+          width={150}
+          height={105}
+        />
+      )}
 
       {showGrid &&
         lons.map((value, index) => {
