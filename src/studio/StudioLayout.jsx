@@ -415,12 +415,11 @@ function MainMap({
   // The publication map should be centred on the sampling locations.
   // Boundaries and interpolation cells are visual/clip layers and must not
   // pull the map extent away from the actual study points.
-  const extentFeatures =
-    points?.length
-      ? points
-      : boundaryFeature
-      ? [boundaryFeature]
-      : cells;
+  const extentFeatures = [
+    ...(points || []),
+    ...(boundaryFeature ? [boundaryFeature] : []),
+    ...(cells || [])
+  ];
 
   const rawBbox = bboxFrom(
     extentFeatures,
@@ -438,9 +437,13 @@ function MainMap({
   const plotW = width - 36;
   const plotH = height - plotY - 14;
 
-  const bbox = hasInterpolation
-    ? aspectFitBbox(rawBbox, plotW / plotH, 0.02)
-    : focusedBbox(rawBbox, plotW / plotH, 0.025);
+  // Always derive the publication extent from both the complete boundary and
+  // every CSV point so all sampling locations remain visible.
+  const bbox = aspectFitBbox(
+    rawBbox,
+    plotW / plotH,
+    hasInterpolation ? 0.025 : 0.045
+  );
 
   const project = projectionFor(
     bbox,

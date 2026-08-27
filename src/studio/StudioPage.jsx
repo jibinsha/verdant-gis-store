@@ -7,34 +7,28 @@ import StudioAnalysis from "./StudioAnalysis";
 import StudioLayers from "./StudioLayers";
 import StudioBoundaryUpload from "./StudioBoundaryUpload";
 import StudioLayout from "./StudioLayout";
-import { detectBoundaryFeature, featureContainsPoint } from "./spatial";
+import { detectBoundaryFeature, detectBoundaryForStudy, featureContainsPoint } from "./spatial";
 import { getPermanentBoundaryResolution } from "./boundaryApi";
 
-function getCustomBoundaryPointStats(boundary, pointFeatures = []) {
-  const boundaryFeatures = boundary?.geojson?.features || [];
-  const validPoints = (pointFeatures || []).filter((feature) => {
-    const coordinates = feature?.geometry?.coordinates;
-    return (
-      feature?.geometry?.type === "Point" &&
-      Array.isArray(coordinates) &&
-      Number.isFinite(Number(coordinates[0])) &&
-      Number.isFinite(Number(coordinates[1]))
-    );
-  });
+function combineBoundaryFeatures(boundary) {
+  const features = boundary?.geojson?.features || [];
+  if (!features.length) return null;
+  if (features.length === 1) return features[0];
 
-  const insideCount = validPoints.filter((point) =>
-    boundaryFeatures.some((feature) =>
-      featureContainsPoint(
-        feature,
-        point.geometry.coordinates
-      )
-    )
-  ).length;
+  const polygonParts = [];
+  for (const feature of features) {
+    const geometry = feature?.geometry;
+    if (!geometry) continue;
+    if (geometry.type === "Polygon") polygonParts.push(geometry.coordinates);
+    else if (geometry.type === "MultiPolygon") polygonParts.push(...geometry.coordinates);
+  }
+
+  if (!polygonParts.length) return features[0];
 
   return {
-    total: validPoints.length,
-    inside: insideCount,
-    outside: Math.max(validPoints.length - insideCount, 0)
+    type: "Feature",
+    properties: { ...(features[0]?.properties || {}), name: boundary.name },
+    geometry: { type: "MultiPolygon", coordinates: polygonParts }
   };
 }
 
@@ -71,10 +65,6 @@ export default function StudioPage() {
       return null;
     };
 
-    // A custom upload is a project boundary in its own right. Keep the full
-    // uploaded geometry for rendering/layout even when none of the CSV points
-    // fall inside it. The point-in-boundary result is handled separately by
-    // customBoundaryStats for the warning shown in the UI.
     const customBoundary = boundaries.find(
       (boundary) =>
         boundary?.sourceType === "upload" &&
@@ -114,21 +104,7 @@ export default function StudioPage() {
     };
   }, [activeLayer, boundaries]);
 
-  const customBoundaryStats = useMemo(() => {
-    const customBoundary = detected.customBoundary || null;
-    if (!customBoundary) {
-      return { total: 0, inside: 0, outside: 0 };
-    }
-
-    return getCustomBoundaryPointStats(
-      customBoundary,
-      activeLayer?.geojson?.features || []
-    );
-  }, [detected.customBoundary, activeLayer]);
-
   const mainDetected = useMemo(() => {
-    if (!activeLayer) return null;
-
     // A customer-uploaded custom boundary always takes precedence.
     if (detected.custom?.boundary && detected.custom?.feature) {
       return {
@@ -168,6 +144,27 @@ export default function StudioPage() {
 
     return null;
   }, [activeLayer, detected, recommendedBoundaryLevel]);
+
+  const customBoundaryStats = useMemo(() => {
+    const feature = detected.customFeature || null;
+    const pointFeatures = activeLayer?.geojson?.features || [];
+    const total = pointFeatures.filter(
+      (featureItem) => featureItem?.geometry?.type === "Point"
+    ).length;
+    const inside = feature
+      ? pointFeatures.filter(
+          (featureItem) =>
+            featureItem?.geometry?.type === "Point" &&
+            featureContainsPoint(feature, featureItem.geometry.coordinates)
+        ).length
+      : 0;
+
+    return {
+      total,
+      inside,
+      outside: Math.max(total - inside, 0)
+    };
+  }, [activeLayer, detected.customFeature]);
 
   useEffect(() => {
     if (!activeLayer) {
@@ -241,6 +238,10 @@ export default function StudioPage() {
 
   function addBoundary(boundary) {
     setBoundaries((current) => [...current, boundary]);
+  }
+
+  function removeBoundary(id) {
+    setBoundaries((current) => current.filter((boundary) => boundary.id !== id));
   }
 
   function openLayout() {
@@ -375,41 +376,10 @@ export default function StudioPage() {
 
               {mainDetected?.boundary ? (
                 <>
-                  {detected.customBoundary ? (
-                    <>
-                      {customBoundaryStats.total > 0 &&
-                        customBoundaryStats.inside === 0 && (
-                          <div className="studio-warning" role="alert">
-                            Warning: none of the CSV sampling points fall inside
-                            the custom boundary. The boundary is still shown on
-                            the map and all CSV points remain visible.
-                          </div>
-                        )}
-
-                      {customBoundaryStats.total > 0 &&
-                        customBoundaryStats.inside > 0 &&
-                        customBoundaryStats.outside > 0 && (
-                          <div className="studio-warning" role="alert">
-                            Warning: {customBoundaryStats.inside} of {customBoundaryStats.total}
-                            CSV sampling points fall inside the custom boundary;
-                            {" "}{customBoundaryStats.outside} point{customBoundaryStats.outside === 1 ? " is" : "s are"} outside.
-                          </div>
-                        )}
-
-                      {customBoundaryStats.total > 0 &&
-                        customBoundaryStats.outside === 0 && (
-                          <p className="studio-muted">
-                            All CSV sampling points are inside the uploaded custom
-                            boundary.
-                          </p>
-                        )}
-                    </>
-                  ) : (
-                    <p className="studio-muted">
-                      The point dataset has been spatially matched to the
-                      uploaded boundary library.
-                    </p>
-                  )}
+                  <p className="studio-muted">
+                    The point dataset has been spatially matched to the
+                    uploaded boundary library.
+                  </p>
 
                   {detected.countryBoundary && (
                     <div className="studio-detected">
@@ -436,9 +406,40 @@ export default function StudioPage() {
                   )}
 
                   {detected.customBoundary && (
-                    <div className="studio-detected">
-                      Custom boundary: {detected.customBoundary.name}
-                    </div>
+                    <>
+                      <div className="studio-detected">
+                        Custom boundary: {detected.customBoundary.name}
+                      </div>
+
+                      {customBoundaryStats.total > 0 &&
+                        customBoundaryStats.inside === 0 && (
+                          <div className="studio-detected studio-warning">
+                            Warning: none of the {customBoundaryStats.total} CSV
+                            points are inside the custom boundary.
+                          </div>
+                        )}
+
+                      {customBoundaryStats.total > 0 &&
+                        customBoundaryStats.inside > 0 &&
+                        customBoundaryStats.inside <
+                          customBoundaryStats.total && (
+                          <div className="studio-detected studio-warning">
+                            Warning: {customBoundaryStats.inside} of{" "}
+                            {customBoundaryStats.total} CSV points are inside
+                            the custom boundary;{" "}
+                            {customBoundaryStats.outside} are outside.
+                          </div>
+                        )}
+
+                      {customBoundaryStats.total > 0 &&
+                        customBoundaryStats.inside ===
+                          customBoundaryStats.total && (
+                          <div className="studio-detected">
+                            All {customBoundaryStats.total} CSV points are
+                            inside the custom boundary.
+                          </div>
+                        )}
+                    </>
                   )}
                 </>
               ) : (
@@ -459,10 +460,7 @@ export default function StudioPage() {
         layers={layers}
         activeLayer={activeLayer}
         boundaries={boundaries}
-        detected={{
-          ...detected,
-          mainFeature: mainDetected?.feature || null
-        }}
+        detected={{ ...detected, mainFeature: mainDetected?.feature || null }}
         analysisResult={analysisResult}
       />
     </div>

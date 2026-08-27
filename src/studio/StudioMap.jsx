@@ -174,20 +174,21 @@ function fitToMapExtent(
   const analysisBounds = featureBounds(analysisGeojson?.features || []);
   const pointBounds = featureBounds(points);
 
-  // Always keep the uploaded/custom boundary and all CSV sampling points
-  // inside the visible map extent. This guarantees the boundary is visible
-  // even when it contains none of the sampling points.
+  // The map canvas must keep the complete custom boundary and every CSV point
+  // visible. When a boundary is supplied, use the union of its extent and the
+  // point extent rather than letting the point cluster hide the boundary.
   const bounds = new LngLatBounds();
-  [pointBounds, boundaryBounds].forEach((candidate) => {
-    if (!candidate || candidate.isEmpty()) return;
-    bounds.extend(candidate.getSouthWest());
-    bounds.extend(candidate.getNorthEast());
-  });
-
-  if (bounds.isEmpty() && analysisBounds && !analysisBounds.isEmpty()) {
-    bounds.extend(analysisBounds.getSouthWest());
-    bounds.extend(analysisBounds.getNorthEast());
+  if (boundaryBounds && !boundaryBounds.isEmpty()) {
+    bounds.extend(boundaryBounds);
   }
+  if (pointBounds && !pointBounds.isEmpty()) {
+    bounds.extend(pointBounds);
+  }
+  if (analysisBounds && !analysisBounds.isEmpty()) {
+    bounds.extend(analysisBounds);
+  }
+
+  if (bounds.isEmpty()) return;
   if (!bounds || bounds.isEmpty()) return;
 
   const sw = bounds.getSouthWest();

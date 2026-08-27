@@ -12,6 +12,7 @@ export default function StudioLayers({
   const projectBoundaries = (boundaries || []).filter(
     (boundary) => boundary?.sourceType === "upload"
   );
+
   return (
     <section className="studio-panel">
       <div className="studio-panel-heading">
@@ -38,12 +39,8 @@ export default function StudioLayers({
           {projectBoundaries.map((boundary) => (
             <div key={boundary.id} className="studio-layer-row">
               <div className="studio-layer-select">
-                <strong>
-                  <MapPinned size={16} /> {boundary.name}
-                </strong>
-                <span>
-                  custom · {boundary.geojson?.features?.length || 0} features
-                </span>
+                <strong><MapPinned size={16} /> {boundary.name}</strong>
+                <span>{boundary.level} · {boundary.geojson?.features?.length || 0} features</span>
               </div>
               <button
                 type="button"
