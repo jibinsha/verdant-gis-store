@@ -1845,7 +1845,7 @@ function Nav() {
                 GIS Studio
               </Link>
               <a
-                href="/#categories"
+                href="/categories"
                 onClick={() =>
                   setOpen(false)
                 }
