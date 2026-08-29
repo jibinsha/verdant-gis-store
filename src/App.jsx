@@ -1854,7 +1854,7 @@ function Nav() {
               </a>
 
               <a
-                href="/#about"
+                href="/about"
                 onClick={() =>
                   setOpen(false)
                 }
