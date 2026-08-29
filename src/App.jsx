@@ -5607,14 +5607,10 @@ function Checkout() {
                   }
                 );
 
-              if (
-                verified.paid
-              ) {
+              if (verified.paid) {
                 clearCart();
 
-                setPaymentDone(
-                  true
-                );
+                setPaymentDone(true);
 
                 setNotice(
                   "Payment verified successfully. Your GIS download access is now active."
