@@ -5609,20 +5609,20 @@ function Checkout() {
 
               if (verified.paid) {
                 clearCart();
-
                 setPaymentDone(true);
-
-                setNotice(
-                  "Payment verified successfully. Your GIS download access is now active."
-                );
 
                 setTimeout(() => {
                   navigate("/dashboard", { replace: true });
                 }, 450);
               } else {
-                setNotice(
-                  "Payment is awaiting capture. Your access will activate after confirmation."
-                );
+             // Payment may still be waiting for webhook/capture.
+             // Go to dashboard anyway.
+                clearCart();
+                setPaymentDone(true);
+
+                setTimeout(() => {
+                  navigate("/dashboard", { replace: true });
+                }, 450);
               }
             } catch (err) {
               setNotice(
