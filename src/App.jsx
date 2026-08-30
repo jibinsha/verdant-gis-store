@@ -1842,7 +1842,7 @@ function Nav() {
                 to="/studio"
                 onClick={() => setOpen(false)}
               >
-                GIS Studio
+                Create Map
               </Link>
               <a
                 href="/categories"
