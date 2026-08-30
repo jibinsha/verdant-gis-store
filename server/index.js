@@ -5,7 +5,9 @@ import crypto from "node:crypto";
 import Razorpay from "razorpay";
 import { createClient } from "@supabase/supabase-js";
 import { resolveStudioBoundaries } from "./gis/studioBoundaries.js";
+const { Resend } = require("resend");
 
+const resend = new Resend(process.env.RESEND_API_KEY);
 const app = express();
 const PORT = Number(process.env.PORT || 8787);
 
@@ -1397,25 +1399,217 @@ const safeName =
 
 app.post("/api/contact", async (req, res) => {
   try {
-    const { name, email, phone, organization, requestType, datasetArea, coverage, format, message, website } = req.body || {};
-    if (String(website || "").trim()) return res.status(200).json({ ok: true });
+    const {
+      name,
+      email,
+      phone,
+      organization,
+      requestType,
+      datasetArea,
+      coverage,
+      format,
+      message,
+      website
+    } = req.body || {};
+
+    // Honeypot spam protection
+    if (String(website || "").trim()) {
+      return res.status(200).json({ ok: true });
+    }
+
+    // Clean inputs
     const cleanName = String(name || "").trim();
     const cleanEmail = String(email || "").trim().toLowerCase();
+    const cleanPhone = String(phone || "").trim().slice(0, 40);
+    const cleanOrganization = String(organization || "").trim().slice(0, 160);
+    const cleanRequestType = String(requestType || "Dataset request")
+      .trim()
+      .slice(0, 80);
+    const cleanDatasetArea = String(datasetArea || "").trim().slice(0, 180);
+    const cleanCoverage = String(coverage || "").trim().slice(0, 180);
+    const cleanFormat = String(format || "").trim().slice(0, 80);
     const cleanMessage = String(message || "").trim();
-    if (!cleanName || !cleanEmail || !cleanMessage) return res.status(400).json({ error: "Name, email and message are required." });
-    if (cleanName.length > 120 || cleanEmail.length > 180 || cleanMessage.length > 3000) return res.status(400).json({ error: "One or more fields are too long." });
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return res.status(400).json({ error: "Please enter a valid email address." });
-    const { error } = await supabaseAdmin.from("contact_requests").insert({
-      name: cleanName, email: cleanEmail, phone: String(phone || "").trim().slice(0, 40) || null,
-      organization: String(organization || "").trim().slice(0, 160) || null,
-      request_type: String(requestType || "Dataset request").trim().slice(0, 80),
-      dataset_area: String(datasetArea || "").trim().slice(0, 180) || null,
-      coverage: String(coverage || "").trim().slice(0, 180) || null,
-      preferred_format: String(format || "").trim().slice(0, 80) || null, message: cleanMessage
+
+    // Validation
+    if (!cleanName || !cleanEmail || !cleanMessage) {
+      return res.status(400).json({
+        error: "Name, email and message are required."
+      });
+    }
+
+    if (
+      cleanName.length > 120 ||
+      cleanEmail.length > 180 ||
+      cleanMessage.length > 3000
+    ) {
+      return res.status(400).json({
+        error: "One or more fields are too long."
+      });
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res.status(400).json({
+        error: "Please enter a valid email address."
+      });
+    }
+
+    // ---------------------------------------------------------
+    // 1. SAVE CONTACT REQUEST TO SUPABASE
+    // ---------------------------------------------------------
+
+    const { error } = await supabaseAdmin
+      .from("contact_requests")
+      .insert({
+        name: cleanName,
+        email: cleanEmail,
+        phone: cleanPhone || null,
+        organization: cleanOrganization || null,
+        request_type: cleanRequestType,
+        dataset_area: cleanDatasetArea || null,
+        coverage: cleanCoverage || null,
+        preferred_format: cleanFormat || null,
+        message: cleanMessage
+      });
+
+    if (error) {
+      console.error(
+        "[Verdant GIS] Contact request insert failed:",
+        error
+      );
+
+      return res.status(500).json({
+        error: "Could not save your request. Please try again."
+      });
+    }
+
+    // ---------------------------------------------------------
+    // 2. SEND EMAIL NOTIFICATION
+    // ---------------------------------------------------------
+
+    try {
+      const { data, error: emailError } = await resend.emails.send({
+        from: "Verdant GIS <onboarding@resend.dev>",
+        to: [process.env.CONTACT_EMAIL],
+        replyTo: cleanEmail,
+        subject: `New Contact Request – ${cleanName}`,
+
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 700px; margin: auto;">
+
+            <h2 style="color: #086b52;">
+              New Contact Request – Verdant GIS
+            </h2>
+
+            <p>
+              A new request has been submitted through the Verdant GIS website.
+            </p>
+
+            <hr>
+
+            <h3>Contact Details</h3>
+
+            <p>
+              <strong>Name:</strong><br>
+              ${cleanName}
+            </p>
+
+            <p>
+              <strong>Email:</strong><br>
+              ${cleanEmail}
+            </p>
+
+            <p>
+              <strong>Phone / WhatsApp:</strong><br>
+              ${cleanPhone || "Not provided"}
+            </p>
+
+            <p>
+              <strong>Organization:</strong><br>
+              ${cleanOrganization || "Not provided"}
+            </p>
+
+            <h3>Request Details</h3>
+
+            <p>
+              <strong>Request Type:</strong><br>
+              ${cleanRequestType}
+            </p>
+
+            <p>
+              <strong>Dataset / Area:</strong><br>
+              ${cleanDatasetArea || "Not provided"}
+            </p>
+
+            <p>
+              <strong>Geographic Coverage:</strong><br>
+              ${cleanCoverage || "Not provided"}
+            </p>
+
+            <p>
+              <strong>Preferred Format:</strong><br>
+              ${cleanFormat || "Not provided"}
+            </p>
+
+            <h3>Message</h3>
+
+            <div style="
+              background: #f4f7f5;
+              padding: 16px;
+              border-radius: 8px;
+              white-space: pre-wrap;
+            ">
+              ${cleanMessage}
+            </div>
+
+            <hr>
+
+            <p style="color: #777; font-size: 13px;">
+              This notification was automatically generated by the
+              Verdant GIS website.
+            </p>
+
+          </div>
+        `
+      });
+
+      if (emailError) {
+        console.error(
+          "[Verdant GIS] Contact email failed:",
+          emailError
+        );
+      } else {
+        console.log(
+          "[Verdant GIS] Contact email sent:",
+          data?.id
+        );
+      }
+
+    } catch (emailErr) {
+      // Do not fail the contact submission if email delivery fails.
+      console.error(
+        "[Verdant GIS] Contact email exception:",
+        emailErr
+      );
+    }
+
+    // ---------------------------------------------------------
+    // 3. SUCCESS
+    // ---------------------------------------------------------
+
+    return res.status(201).json({
+      ok: true
     });
-    if (error) { console.error("[Verdant GIS] Contact request insert failed:", error); return res.status(500).json({ error: "Could not save your request. Please try again." }); }
-    return res.status(201).json({ ok: true });
-  } catch (err) { console.error("[Verdant GIS] Contact request error:", err); return res.status(500).json({ error: "Could not submit your request." }); }
+
+  } catch (err) {
+    console.error(
+      "[Verdant GIS] Contact request error:",
+      err
+    );
+
+    return res.status(500).json({
+      error: "Could not submit your request."
+    });
+  }
 });
 
 /* ============================================================
