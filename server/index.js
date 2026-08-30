@@ -5,7 +5,7 @@ import crypto from "node:crypto";
 import Razorpay from "razorpay";
 import { createClient } from "@supabase/supabase-js";
 import { resolveStudioBoundaries } from "./gis/studioBoundaries.js";
-const { Resend } = require("resend");
+import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const app = express();
