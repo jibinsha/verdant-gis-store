@@ -513,7 +513,7 @@ function MainMap({
   // outside this dark frame, while the title/subtitle and north arrow live
   // cleanly inside it, matching the supplied reference layout.
   const plotX = 18;
-  const plotY = 28;
+  const plotY = 82;
   const plotW = width - 36;
   const plotH = height - plotY - 14;
 
@@ -644,7 +644,7 @@ function MainMap({
 
       <text
         x={width / 2}
-        y={plotY + 39}
+        y="38"
         textAnchor="middle"
         fontSize="25"
         fontWeight="700"
@@ -655,7 +655,7 @@ function MainMap({
       {subtitle && (
         <text
           x={width / 2}
-          y={plotY + 55}
+          y="54"
           textAnchor="middle"
           fontSize="11.5"
           fill="#4b5752"
