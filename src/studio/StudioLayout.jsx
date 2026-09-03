@@ -384,6 +384,7 @@ function InsetMap({
         y={height - 18}
         km={scaleKm}
         width={108}
+      />
     )}
     </g>
   );
