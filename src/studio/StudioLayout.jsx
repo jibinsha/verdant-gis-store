@@ -96,21 +96,47 @@ function aspectFitBbox(bbox, targetAspect, paddingRatio = 0.04) {
 
 function projectionFor(bbox, width, height) {
   const [minX, minY, maxX, maxY] = bbox;
-  const dx = Math.max(maxX - minX, 0.000001);
-  const dy = Math.max(maxY - minY, 0.000001);
 
-  const scale = Math.min(width / dx, height / dy);
-  const mapW = dx * scale;
-  const mapH = dy * scale;
+  const midLat = (minY + maxY) / 2;
+  const lonFactor = Math.cos((midLat * Math.PI) / 180);
+
+  const dxKm = Math.max(
+    (maxX - minX) * 111.32 * lonFactor,
+    0.001
+  );
+
+  const dyKm = Math.max(
+    (maxY - minY) * 111.32,
+    0.001
+  );
+
+  const scale = Math.min(
+    width / dxKm,
+    height / dyKm
+  );
+
+  const mapW = dxKm * scale;
+  const mapH = dyKm * scale;
+
   const offsetX = (width - mapW) / 2;
   const offsetY = (height - mapH) / 2;
 
-  return ([x, y]) => [
-    offsetX + (Number(x) - minX) * scale,
-    height - offsetY - (Number(y) - minY) * scale
-  ];
-}
+  return ([x, y]) => {
+    const xKm =
+      (Number(x) - minX) *
+      111.32 *
+      lonFactor;
 
+    const yKm =
+      (Number(y) - minY) *
+      111.32;
+
+    return [
+      offsetX + xKm * scale,
+      height - offsetY - yKm * scale
+    ];
+  };
+}
 function formatCoordinate(value, axis) {
   if (!Number.isFinite(Number(value))) return "";
 
@@ -140,29 +166,28 @@ function formatNumber(value) {
 }
 
 function niceScaleKm(widthDegrees, latitude) {
-  const approximateKm =
-    Math.max(
-      0.1,
-      widthDegrees *
-        111.32 *
-        Math.max(
-          Math.cos((latitude * Math.PI) / 180),
-          0.15
-        )
-    );
+  const lonKm =
+    widthDegrees *
+    111.32 *
+    Math.cos((latitude * Math.PI) / 180);
 
-  const target = approximateKm * 0.32;
+  const target = Math.max(lonKm * 0.32, 0.1);
+
   const power = Math.pow(
     10,
-    Math.floor(Math.log10(Math.max(target, 0.1)))
+    Math.floor(Math.log10(target))
   );
 
-  const candidates = [1, 1.5, 2, 2.5, 5, 7.5, 10];
+  const candidates = [1, 2, 2.5, 5, 10];
+
   let best = candidates[0] * power;
 
   for (const candidate of candidates) {
     const value = candidate * power;
-    if (value <= target * 1.15) best = value;
+
+    if (value <= target) {
+      best = value;
+    }
   }
 
   return Math.max(0.1, best);
@@ -377,13 +402,6 @@ function InsetMap({
         x={width - 31}
         y={51}
         scale={0.62}
-      />
-    {scaleKm && (
-      <ScaleBar
-        x={16}
-        y={height - 18}
-        km={scaleKm}
-        width={108}
       />
     )}
     </g>
