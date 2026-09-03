@@ -1397,86 +1397,83 @@ export default function StudioLayout({
     );
   }
 
-  function exportPng() {
-    const svg =
-      previewRef.current?.querySelector(
-        "svg"
+function exportPng() {
+  const svg =
+    previewRef.current?.querySelector(
+      "svg"
+    );
+
+  if (!svg) return;
+
+  const xml =
+    new XMLSerializer().serializeToString(
+      svg
+    );
+
+  const url =
+    URL.createObjectURL(
+      new Blob(
+        [xml],
+        {
+          type:
+            "image/svg+xml;charset=utf-8"
+        }
+      )
+    );
+
+  const image =
+    new Image();
+
+  image.onload = () => {
+    const canvas =
+      document.createElement(
+        "canvas"
       );
 
-    if (!svg) return;
+    // A4 landscape at 800 DPI.
+    canvas.width = 9354;
+    canvas.height = 6614;
 
-    const xml =
-      new XMLSerializer().serializeToString(
-        svg
+    const context =
+      canvas.getContext("2d");
+
+    context.fillStyle = "#fff";
+
+    context.fillRect(
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+    context.drawImage(
+      image,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+    URL.revokeObjectURL(url);
+
+    const link =
+      document.createElement("a");
+
+    link.href =
+      canvas.toDataURL(
+        "image/png"
       );
 
-    const url =
-      URL.createObjectURL(
-        new Blob(
-          [xml],
-          {
-            type:
-              "image/svg+xml;charset=utf-8"
-          }
-        )
-      );
+    link.download =
+      isInterpolation
+        ? "verdant-gis-idw-map-800dpi.png"
+        : "verdant-gis-location-map-800dpi.png";
 
-    const image =
-      new Image();
+    link.click();
+  };
 
-    image.onload = () => {
-      const canvas =
-        document.createElement(
-          "canvas"
-        );
-
-      // A4 landscape at 300 DPI.
-      canvas.width = 3508;
-      canvas.height = 2480;
-
-      const context =
-        canvas.getContext("2d");
-
-      context.fillStyle = "#fff";
-      context.fillRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
-
-      context.drawImage(
-        image,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
-
-      URL.revokeObjectURL(
-        url
-      );
-
-      const link =
-        document.createElement(
-          "a"
-        );
-
-      link.href =
-        canvas.toDataURL(
-          "image/png"
-        );
-
-      link.download =
-        isInterpolation
-          ? "verdant-gis-idw-map.png"
-          : "verdant-gis-location-map.png";
-
-      link.click();
-    };
-
-    image.src = url;
-  }
+  image.src = url;
+}
 
   return (
     <div className="studio-layout-modal">
