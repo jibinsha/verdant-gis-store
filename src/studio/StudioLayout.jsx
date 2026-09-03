@@ -378,13 +378,13 @@ function InsetMap({
         y={51}
         scale={0.62}
       />
-
+    {scaleKm && (
       <ScaleBar
         x={16}
         y={height - 18}
         km={scaleKm}
         width={108}
-      />
+    )}
     </g>
   );
 }
@@ -1098,7 +1098,6 @@ function LayoutSvg({
         highlightFeature={
           stateFeature
         }
-        scaleKm={500}
       />
 
       <InsetMap
