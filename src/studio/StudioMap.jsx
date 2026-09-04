@@ -410,12 +410,21 @@ const activeLayer =
   (layers || []).find(
     (layer) => layer?.id === activeLayerId
   ) ||
-  (layers || [])[0] ||
+  (layers || []).find(
+    (layer) => getPointFeatures([layer]).length > 0
+  ) ||
   null;
 
-const points = getPointFeatures(
-  activeLayer ? [activeLayer] : []
-);
+const points = activeLayer
+  ? getPointFeatures([activeLayer])
+  : [];
+
+if (!points.length && layers?.length) {
+  console.warn("[StudioMap] Layer exists but no point features found", {
+    activeLayerId,
+    layers
+  });
+}
     console.log("[StudioMap] RENDER", {
       activeLayerId,
       layers,
