@@ -563,7 +563,6 @@ console.log("[POINT DEBUG]", {
 if (showPoints && points.length) {
       if (showPoints && points.length) {
         points.forEach((feature, index) => {
-points.forEach((feature, index) => {
   console.log("[POINT DEBUG] CREATING", index, feature.geometry.coordinates);
           const props = feature.properties || {};
           const label =
