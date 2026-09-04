@@ -415,7 +415,19 @@ const activeLayer =
   ) ||
   null;
 
-const points
+const points = activeLayer
+  ? getPointFeatures([activeLayer])
+  : [];
+
+console.log("[StudioMap] MARKER DATA", {
+  activeLayerId,
+  activeLayer,
+  layersCount: layers?.length,
+  layerIds: (layers || []).map((l) => l?.id),
+  layerNames: (layers || []).map((l) => l?.name),
+  pointsCount: points.length,
+  points
+});
 
 if (!points.length && layers?.length) {
   console.warn("[StudioMap] Layer exists but no point features found", {
