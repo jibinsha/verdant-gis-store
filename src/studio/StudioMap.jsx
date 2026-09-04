@@ -553,8 +553,17 @@ if (!points.length && layers?.length) {
       // style/source stack and are recreated whenever the active CSV changes.
       // removeMarkers() above guarantees deleted/replaced CSV layers cannot
       // leave stale points behind.
+console.log("[StudioMap] POINT MARKER BLOCK", {
+  showPoints,
+  pointCount: points.length,
+  mapExists: !!map
+});
       if (showPoints && points.length) {
         points.forEach((feature, index) => {
+console.log("[StudioMap] CREATING POINT", {
+  index,
+  coordinates: feature?.geometry?.coordinates
+});
           const props = feature.properties || {};
           const label =
             props["Sample no."] ||
@@ -572,10 +581,10 @@ if (!points.length && layers?.length) {
               new Popup({ offset: 12 }).setText(String(label))
             )
             .addTo(map);
-console.log("[StudioMap] MARKER CREATED", {
-  coordinates: feature.geometry.coordinates,
+console.log("[StudioMap] MARKER AFTER ADD", {
+  index,
   markerElement: marker.getElement(),
-  mapCanvas: map.getCanvas()
+  markerCount: document.querySelectorAll(".maplibregl-marker").length
 });
           markersRef.current.push(marker);
         });
