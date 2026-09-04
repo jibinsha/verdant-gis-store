@@ -406,12 +406,16 @@ export default function StudioMap({
     removeStudioLayers(map);
     removeMarkers();
 
-    const activeLayer = (layers || []).find(
-      (layer) => layer?.id === activeLayerId
-    );
-    const points = getPointFeatures(
-      activeLayer ? [activeLayer] : []
-    );
+const activeLayer =
+  (layers || []).find(
+    (layer) => layer?.id === activeLayerId
+  ) ||
+  (layers || [])[0] ||
+  null;
+
+const points = getPointFeatures(
+  activeLayer ? [activeLayer] : []
+);
     console.log("[StudioMap] RENDER", {
       activeLayerId,
       layers,
@@ -726,14 +730,15 @@ export default function StudioMap({
           (boundary) => boundary?.id === focusTarget.id
         );
       } else {
-        targetLayer =
-          (layers || []).find(
-            (layer) => layer?.id === focusTarget?.id
-          ) ||
-          (layers || []).find(
-            (layer) => layer?.id === activeLayerId
-          );
-      }
+targetLayer =
+  (layers || []).find(
+    (layer) => layer?.id === focusTarget?.id
+  ) ||
+  (layers || []).find(
+    (layer) => layer?.id === activeLayerId
+  ) ||
+  (layers || [])[0] ||
+  null;
 
       const points = getPointFeatures(
         targetLayer ? [targetLayer] : []
