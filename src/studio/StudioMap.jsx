@@ -730,15 +730,13 @@ const points = getPointFeatures(
           (boundary) => boundary?.id === focusTarget.id
         );
       } else {
-       targetLayer =
-  (layers || []).find(
-    (layer) => layer?.id === focusTarget?.id
-  ) ||
-  (layers || []).find(
-    (layer) => layer?.id === activeLayerId
-  ) ||
-  (layers || [])[0] ||
-  null;
+        targetLayer =
+          (layers || []).find(
+            (layer) => layer?.id === focusTarget?.id
+          ) ||
+          (layers || []).find(
+            (layer) => layer?.id === activeLayerId
+          );
       }
 
       const points = getPointFeatures(
