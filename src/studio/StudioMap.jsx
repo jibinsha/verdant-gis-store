@@ -412,7 +412,13 @@ export default function StudioMap({
     const points = getPointFeatures(
       activeLayer ? [activeLayer] : []
     );
-
+    console.log("[StudioMap] RENDER", {
+      activeLayerId,
+      layers,
+      activeLayer,
+      pointCount: points.length,
+      points
+    });
     // Boundary library layers.
     (boundaries || []).forEach((boundary) => {
       addBoundary(
