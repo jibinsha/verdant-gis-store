@@ -350,7 +350,7 @@ function cellColor(
           )
         );
 
-  const hexcolors =
+  const colors =
     IDW_PALETTES[paletteName] ||
     IDW_PALETTES.Spectrum;
 
