@@ -572,7 +572,11 @@ if (!points.length && layers?.length) {
               new Popup({ offset: 12 }).setText(String(label))
             )
             .addTo(map);
-
+console.log("[StudioMap] MARKER CREATED", {
+  coordinates: feature.geometry.coordinates,
+  markerElement: marker.getElement(),
+  mapCanvas: map.getCanvas()
+});
           markersRef.current.push(marker);
         });
       }
