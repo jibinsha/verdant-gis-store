@@ -15,7 +15,61 @@ import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&ur
 
 const SOURCE_PREFIX = "studio-source-";
 const LAYER_PREFIX = "studio-layer-";
+const IDW_PALETTES = {
+  Spectrum: [
+    "#3b4cc0",
+    "#5b6fd0",
+    "#7b8fd1",
+    "#4aa6b8",
+    "#75b798",
+    "#a7cf8c",
+    "#d6d94f",
+    "#f5c04b",
+    "#f28e38",
+    "#d84a5a",
+    "#9b3f8f",
+    "#303f9f"
+  ],
 
+  Viridis: [
+    "#440154",
+    "#482878",
+    "#3e4989",
+    "#31688e",
+    "#26828e",
+    "#1f9e89",
+    "#35b779",
+    "#6ece58",
+    "#b5de2b",
+    "#fde725"
+  ],
+
+  Earth: [
+    "#543005",
+    "#8c510a",
+    "#bf812d",
+    "#dfc27d",
+    "#c7eae5",
+    "#80cdc1",
+    "#35978f",
+    "#01665e",
+    "#003c30",
+    "#1b7837"
+  ],
+
+  Cool: [
+    "#313695",
+    "#4575b4",
+    "#74add1",
+    "#abd9e9",
+    "#e0f3f8",
+    "#fee090",
+    "#fdae61",
+    "#f46d43",
+    "#d73027",
+    "#a50026"
+  ]
+};
 // Vite must emit the MapLibre worker as a real JavaScript module. This avoids
 // the static-host fallback page being returned for /assets/*.mjs.
 setWorkerUrl(maplibreWorkerUrl);
@@ -419,33 +473,49 @@ export default function StudioMap({
         paint: {
           "fill-opacity": 0.78,
           "fill-color": [
-            "interpolate",
-            ["linear"],
-            [
-              "coalesce",
-              [
-                "to-number",
-                [
-                  "get",
-                  analysisResult.valueField
-                ]
-              ],
-              min
-            ],
-            min,
-            "#2c7bb6",
-            min + range * 0.25,
-            "#abd9e9",
-            min + range * 0.5,
-            "#ffffbf",
-            min + range * 0.75,
-            "#fdae61",
-            max,
-            "#d7191c"
-          ]
-        }
-      });
-    }
+  "interpolate",
+  ["linear"],
+  [
+    "coalesce",
+    [
+      "to-number",
+      [
+        "get",
+        analysisResult.valueField
+      ]
+    ],
+    min
+  ],
+
+  min,
+  IDW_PALETTES[idwPalette][0],
+
+  min + range * 0.25,
+  IDW_PALETTES[idwPalette][
+    Math.floor(
+      IDW_PALETTES[idwPalette].length * 0.25
+    )
+  ],
+
+  min + range * 0.5,
+  IDW_PALETTES[idwPalette][
+    Math.floor(
+      IDW_PALETTES[idwPalette].length * 0.5
+    )
+  ],
+
+  min + range * 0.75,
+  IDW_PALETTES[idwPalette][
+    Math.floor(
+      IDW_PALETTES[idwPalette].length * 0.75
+    )
+  ],
+
+  max,
+  IDW_PALETTES[idwPalette][
+    IDW_PALETTES[idwPalette].length - 1
+  ]
+]
 
     // Keep sampling points as DOM markers. This is deliberately retained
     // for reliability: markers remain visible independently of the basemap

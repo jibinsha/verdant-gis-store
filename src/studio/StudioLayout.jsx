@@ -350,7 +350,7 @@ function cellColor(
           )
         );
 
-  const colors =
+  const hexcolors =
     IDW_PALETTES[paletteName] ||
     IDW_PALETTES.Spectrum;
 
@@ -1708,49 +1708,70 @@ function exportPng() {
             </section>
 
             {isInterpolation && (
-              <section className="studio-panel">
-                <div className="studio-panel-heading">
-                  <div>
-                    <span className="section-kicker">
-                      INTERPOLATION
-                    </span>
-                    <h2>IDW result</h2>
-                  </div>
-                </div>
+  <section className="studio-panel">
+    <div className="studio-panel-heading">
+      <div>
+        <span className="section-kicker">
+          INTERPOLATION
+        </span>
+        <h2>IDW result</h2>
+      </div>
+    </div>
 
-                <p className="studio-muted">
-                  {analysisResult.valueField} · power{" "}
-                  {analysisResult.power} ·{" "}
-                  {idwCells.length} cells
-                </p>
+    <p className="studio-muted">
+      {analysisResult.valueField} · power{" "}
+      {analysisResult.power} ·{" "}
+      {idwCells.length} cells
+    </p>
 
-                <div className="idw-preview-gradient" />
+    <div
+      className="idw-preview-gradient"
+      style={{
+        background: `linear-gradient(
+          to right,
+          ${IDW_PALETTES[idwPalette].join(",")}
+        )`
+      }}
+    />
 
-                <div className="idw-range">
-                  <span>
-                    {formatNumber(
-                      minValue
-                    )}
-                  </span>
-                  <span>
-                    {formatNumber(
-                      maxValue
-                    )}
-                  </span>
-                </div>
+    <label>Symbology</label>
 
-                {analysisResult.boundaryName && (
-                  <p className="studio-muted">
-                    Clipped to:{" "}
-                    <strong>
-                      {
-                        analysisResult.boundaryName
-                      }
-                    </strong>
-                  </p>
-                )}
-              </section>
-            )}
+    <select
+      value={idwPalette}
+      onChange={(e) =>
+        setIdwPalette(e.target.value)
+      }
+    >
+      {Object.keys(IDW_PALETTES).map((palette) => (
+        <option
+          value={palette}
+          key={palette}
+        >
+          {palette}
+        </option>
+      ))}
+    </select>
+
+    <div className="idw-range">
+      <span>
+        {formatNumber(minValue)}
+      </span>
+
+      <span>
+        {formatNumber(maxValue)}
+      </span>
+    </div>
+
+    {analysisResult.boundaryName && (
+      <p className="studio-muted">
+        Clipped to:{" "}
+        <strong>
+          {analysisResult.boundaryName}
+        </strong>
+      </p>
+    )}
+  </section>
+)}
           </aside>
 
           <main className="layout-canvas-area">
