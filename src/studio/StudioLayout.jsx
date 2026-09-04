@@ -4,7 +4,61 @@ import { bboxOfFeatures, featureContainsPoint } from "./spatial";
 
 const A4_W = 1123;
 const A4_H = 794;
+const IDW_PALETTES = {
+  Spectrum: [
+    "#3b4cc0",
+    "#5b6fd0",
+    "#7b8fd1",
+    "#4aa6b8",
+    "#75b798",
+    "#a7cf8c",
+    "#d6d94f",
+    "#f5c04b",
+    "#f28e38",
+    "#d84a5a",
+    "#9b3f8f",
+    "#303f9f"
+  ],
 
+  Viridis: [
+    "#440154",
+    "#482878",
+    "#3e4989",
+    "#31688e",
+    "#26828e",
+    "#1f9e89",
+    "#35b779",
+    "#6ece58",
+    "#b5de2b",
+    "#fde725"
+  ],
+
+  Earth: [
+    "#543005",
+    "#8c510a",
+    "#bf812d",
+    "#dfc27d",
+    "#c7eae5",
+    "#80cdc1",
+    "#35978f",
+    "#01665e",
+    "#003c30",
+    "#1b7837"
+  ],
+
+  Cool: [
+    "#313695",
+    "#4575b4",
+    "#74add1",
+    "#abd9e9",
+    "#e0f3f8",
+    "#fee090",
+    "#fdae61",
+    "#f46d43",
+    "#d73027",
+    "#a50026"
+  ]
+};
 function geometryPath(geometry, project) {
   if (!geometry) return "";
 
@@ -278,35 +332,59 @@ function interiorGridValues(min, max, count = 3) {
   );
 }
 
-function cellColor(value, min, max) {
+function cellColor(
+  value,
+  min,
+  max,
+  paletteName = "Spectrum"
+) {
   const t =
     max === min
       ? 0.5
       : Math.max(
           0,
-          Math.min(1, (value - min) / (max - min))
+          Math.min(
+            1,
+            (value - min) /
+              (max - min)
+          )
         );
 
-  const stops = [
-    [44, 123, 182],
-    [171, 217, 233],
-    [255, 255, 191],
-    [253, 174, 97],
-    [215, 25, 33]
-  ];
+  const colors =
+    IDW_PALETTES[paletteName] ||
+    IDW_PALETTES.Spectrum;
 
-  const position = t * (stops.length - 1);
+  const stops = colors.map((hex) => {
+    const clean = hex.replace("#", "");
+
+    return [
+      parseInt(clean.slice(0, 2), 16),
+      parseInt(clean.slice(2, 4), 16),
+      parseInt(clean.slice(4, 6), 16)
+    ];
+  });
+
+  const position =
+    t * (stops.length - 1);
+
   const index = Math.min(
     Math.floor(position),
     stops.length - 2
   );
-  const local = position - index;
+
+  const local =
+    position - index;
+
   const a = stops[index];
   const b = stops[index + 1];
 
   return `rgb(${a
     .map((c, i) =>
-      Math.round(c + (b[i] - c) * local)
+      Math.round(
+        c +
+          (b[i] - c) *
+            local
+      )
     )
     .join(",")})`;
 }
@@ -719,7 +797,8 @@ function MainMap({
                 fill={cellColor(
                   value,
                   minValue,
-                  maxValue
+                  maxValue,
+                  idwPalette
                 )}
                 stroke="#fff"
                 strokeWidth="0.18"
@@ -1069,7 +1148,8 @@ function LayoutSvg({
   showGrid,
   showBoundary,
   showLabels,
-  samplingLegend
+  samplingLegend,
+  idwPalette
 }) {
   const margin = 14;
   const insetW = 260;
@@ -1205,7 +1285,8 @@ export default function StudioLayout({
     useState(true);
   const [showLabels, setShowLabels] =
     useState(false);
-
+  const [idwPalette, setIdwPalette] =
+    useState("Spectrum");
   const previewRef =
     useRef(null);
 
@@ -1353,7 +1434,8 @@ export default function StudioLayout({
     showPoints,
     showGrid,
     showBoundary,
-    showLabels
+    showLabels,
+    idwPalette
   };
 
   function exportSvg() {

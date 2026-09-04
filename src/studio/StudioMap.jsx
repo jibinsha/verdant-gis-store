@@ -304,6 +304,7 @@ export default function StudioMap({
   boundaries = [],
   analysisResult = null,
   mapMode = "location",
+  idwPalette = "Spectrum",
   pointSize = 6,
   showPoints = true,
   selectedBoundaryId = "",
