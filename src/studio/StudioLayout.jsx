@@ -551,6 +551,7 @@ function MainMap({
   showLabels,
   samplingLegend,
   customBoundaryFeature = null
+  idwPalette = "Spectrum"
 }) {
   const hasInterpolation =
     cells?.length > 0 && Boolean(valueField);
@@ -680,35 +681,29 @@ function MainMap({
   return (
     <g transform={`translate(${x} ${y})`}>
       <defs>
-        <linearGradient
-          id="idw-gradient"
-          x1="0%"
-          x2="100%"
-          y1="0%"
-          y2="0%"
-        >
+  {Object.entries(IDW_PALETTES).map(
+    ([name, colors]) => (
+      <linearGradient
+        key={name}
+        id={`idw-gradient-${name}`}
+        x1="0%"
+        x2="100%"
+        y1="0%"
+        y2="0%"
+      >
+        {colors.map((color, index) => (
           <stop
-            offset="0%"
-            stopColor="#2c7bb6"
+            key={`${name}-${index}`}
+            offset={`${
+              (index / (colors.length - 1)) *
+              100
+            }%`}
+            stopColor={color}
           />
-          <stop
-            offset="25%"
-            stopColor="#abd9e9"
-          />
-          <stop
-            offset="50%"
-            stopColor="#ffffbf"
-          />
-          <stop
-            offset="75%"
-            stopColor="#fdae61"
-          />
-          <stop
-            offset="100%"
-            stopColor="#d7191d"
-          />
-        </linearGradient>
-
+        ))}
+      </linearGradient>
+    )
+  )}
         {boundaryPath && (
           <clipPath
             id={clipId}
@@ -1077,7 +1072,7 @@ function MainMap({
             y="1"
             width="128"
             height="10"
-            fill="url(#idw-gradient)"
+            fill={`url(#idw-gradient-${idwPalette})`}
           />
           <text
             x="0"
@@ -1256,6 +1251,7 @@ function LayoutSvg({
         }
         showLabels={showLabels}
         samplingLegend={samplingLegend}
+        idwPalette={idwPalette}
       />
     </svg>
   );
