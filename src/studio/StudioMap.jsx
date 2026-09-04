@@ -614,6 +614,7 @@ export default function StudioMap({
     boundaries,
     analysisResult,
     mapMode,
+    idwPalette,
     pointSize,
     showPoints,
     selectedBoundaryId,
