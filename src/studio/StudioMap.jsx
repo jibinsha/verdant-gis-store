@@ -553,36 +553,30 @@ if (!points.length && layers?.length) {
       // style/source stack and are recreated whenever the active CSV changes.
       // removeMarkers() above guarantees deleted/replaced CSV layers cannot
       // leave stale points behind.
-
-
 if (showPoints && points.length) {
-      if (showPoints && points.length) {
-        points.forEach((feature, index) => {
+      points.forEach((feature, index) => {
+        const props = feature.properties || {};
 
-          const props = feature.properties || {};
-          const label =
-            props["Sample no."] ||
-            props.Sample ||
-            props.Name ||
-            props.name ||
-            `Location ${index + 1}`;
+        const label =
+          props["Sample no."] ||
+          props.Sample ||
+          props.Name ||
+          props.name ||
+          `Location ${index + 1}`;
 
-          const marker = new Marker({
-            element: markerElement(pointSize),
-            anchor: "center"
-          })
-            .setLngLat(feature.geometry.coordinates)
-            .setPopup(
-              new Popup({ offset: 12 }).setText(String(label))
-            )
-            .addTo(map);
+        const marker = new Marker({
+          element: markerElement(pointSize),
+          anchor: "center"
+        })
+          .setLngLat(feature.geometry.coordinates)
+          .setPopup(
+            new Popup({ offset: 12 }).setText(String(label))
+          )
+          .addTo(map);
 
-          markersRef.current.push(marker);
-        });
-      }
+        markersRef.current.push(marker);
+      });
     }
-  }
-
   useEffect(() => {
     if (!containerRef.current || mapRef.current) {
       return;
