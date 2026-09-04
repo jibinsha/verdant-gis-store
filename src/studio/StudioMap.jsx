@@ -473,80 +473,81 @@ export default function StudioMap({
         paint: {
           "fill-opacity": 0.78,
           "fill-color": [
-  "interpolate",
-  ["linear"],
-  [
-    "coalesce",
-    [
-      "to-number",
-      [
-        "get",
-        analysisResult.valueField
-      ]
-    ],
-    min
-  ],
+            "interpolate",
+            ["linear"],
+            [
+              "coalesce",
+              [
+                "to-number",
+                [
+                  "get",
+                  analysisResult.valueField
+                ]
+              ],
+              min
+            ],
 
-  min,
-  IDW_PALETTES[idwPalette][0],
+            min,
+            IDW_PALETTES[idwPalette][0],
 
-  min + range * 0.25,
-  IDW_PALETTES[idwPalette][
-    Math.floor(
-      IDW_PALETTES[idwPalette].length * 0.25
-    )
-  ],
+            min + range * 0.25,
+            IDW_PALETTES[idwPalette][
+              Math.floor(
+                IDW_PALETTES[idwPalette].length * 0.25
+              )
+            ],
 
-  min + range * 0.5,
-  IDW_PALETTES[idwPalette][
-    Math.floor(
-      IDW_PALETTES[idwPalette].length * 0.5
-    )
-  ],
+            min + range * 0.5,
+            IDW_PALETTES[idwPalette][
+              Math.floor(
+                IDW_PALETTES[idwPalette].length * 0.5
+              )
+            ],
 
-  min + range * 0.75,
-  IDW_PALETTES[idwPalette][
-    Math.floor(
-      IDW_PALETTES[idwPalette].length * 0.75
-    )
-  ],
+            min + range * 0.75,
+            IDW_PALETTES[idwPalette][
+              Math.floor(
+                IDW_PALETTES[idwPalette].length * 0.75
+              )
+            ],
 
-  max,
-  IDW_PALETTES[idwPalette][
-    IDW_PALETTES[idwPalette].length - 1
-  ]
-]
-
-    // Keep sampling points as DOM markers. This is deliberately retained
-    // for reliability: markers remain visible independently of the basemap
-    // style/source stack and are recreated whenever the active CSV changes.
-    // removeMarkers() above guarantees deleted/replaced CSV layers cannot
-    // leave stale points behind.
-    if (showPoints && points.length) {
-      points.forEach((feature, index) => {
-        const props = feature.properties || {};
-        const label =
-          props["Sample no."] ||
-          props.Sample ||
-          props.Name ||
-          props.name ||
-          `Location ${index + 1}`;
-
-        const marker = new Marker({
-          element: markerElement(pointSize),
-          anchor: "center"
-        })
-          .setLngLat(feature.geometry.coordinates)
-          .setPopup(
-            new Popup({ offset: 12 }).setText(String(label))
-          )
-          .addTo(map);
-
-        markersRef.current.push(marker);
+            max,
+            IDW_PALETTES[idwPalette][
+              IDW_PALETTES[idwPalette].length - 1
+            ]
+          ]
+        }
       });
-    }
 
-  }
+      // Keep sampling points as DOM markers. This is deliberately retained
+      // for reliability: markers remain visible independently of the basemap
+      // style/source stack and are recreated whenever the active CSV changes.
+      // removeMarkers() above guarantees deleted/replaced CSV layers cannot
+      // leave stale points behind.
+      if (showPoints && points.length) {
+        points.forEach((feature, index) => {
+          const props = feature.properties || {};
+          const label =
+            props["Sample no."] ||
+            props.Sample ||
+            props.Name ||
+            props.name ||
+            `Location ${index + 1}`;
+
+          const marker = new Marker({
+            element: markerElement(pointSize),
+            anchor: "center"
+          })
+            .setLngLat(feature.geometry.coordinates)
+            .setPopup(
+              new Popup({ offset: 12 }).setText(String(label))
+            )
+            .addTo(map);
+
+          markersRef.current.push(marker);
+        });
+      }
+    }
 
 
   useEffect(() => {
