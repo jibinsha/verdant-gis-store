@@ -415,9 +415,7 @@ const activeLayer =
   ) ||
   null;
 
-const points = activeLayer
-  ? getPointFeatures([activeLayer])
-  : [];
+const points
 
 if (!points.length && layers?.length) {
   console.warn("[StudioMap] Layer exists but no point features found", {
