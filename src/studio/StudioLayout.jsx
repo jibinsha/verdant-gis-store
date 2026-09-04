@@ -550,7 +550,7 @@ function MainMap({
   showBoundary,
   showLabels,
   samplingLegend,
-  customBoundaryFeature = null
+  customBoundaryFeature = null,
   idwPalette = "Spectrum"
 }) {
   const hasInterpolation =
