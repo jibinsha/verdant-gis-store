@@ -548,7 +548,7 @@ export default function StudioMap({
         });
       }
     }
-
+  }
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) {
