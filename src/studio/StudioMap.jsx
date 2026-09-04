@@ -406,12 +406,9 @@ export default function StudioMap({
     removeStudioLayers(map);
     removeMarkers();
 
-    const activeLayer =
-    (layers || []).find(
+    const activeLayer = (layers || []).find(
       (layer) => layer?.id === activeLayerId
-    ) ||
-    (layers || [])[0] ||
-    null;
+    );
     const points = getPointFeatures(
       activeLayer ? [activeLayer] : []
     );
