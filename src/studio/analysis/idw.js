@@ -64,7 +64,7 @@ export function runIDW({
   cellSize = 1,
   power = 2,
   boundaryFeature = null,
-  maxCells = 10000
+  maxCells = 100000
 }) {
   if (!geojson?.features?.length) {
     throw new Error("No point data available.");
@@ -109,7 +109,7 @@ export function runIDW({
   }
 
   const [minX, minY, maxX, maxY] = bbox;
-  const requestedKm = Math.max(0.1, Number(cellSize) || 1);
+  const requestedKm = Math.max(0.001, Number(cellSize) || 1);
   const averageLat = (minY + maxY) / 2;
   const dx = kmToLongitudeDegrees(requestedKm, averageLat);
   const dy = kmToLatitudeDegrees(requestedKm);
