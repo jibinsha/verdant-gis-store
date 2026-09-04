@@ -730,7 +730,7 @@ const points = getPointFeatures(
           (boundary) => boundary?.id === focusTarget.id
         );
       } else {
-targetLayer =
+       targetLayer =
   (layers || []).find(
     (layer) => layer?.id === focusTarget?.id
   ) ||
@@ -739,6 +739,7 @@ targetLayer =
   ) ||
   (layers || [])[0] ||
   null;
+      }
 
       const points = getPointFeatures(
         targetLayer ? [targetLayer] : []
