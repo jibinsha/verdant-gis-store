@@ -406,16 +406,12 @@ export default function StudioMap({
     removeStudioLayers(map);
     removeMarkers();
 
-const activeLayer =
-  (layers || []).find(
-    (layer) => layer?.id === activeLayerId
-  ) ||
-  (layers || [])[0] ||
-  null;
-
-const points = getPointFeatures(
-  activeLayer ? [activeLayer] : []
-);
+    const activeLayer = (layers || []).find(
+      (layer) => layer?.id === activeLayerId
+    );
+    const points = getPointFeatures(
+      activeLayer ? [activeLayer] : []
+    );
 
     // Boundary library layers.
     (boundaries || []).forEach((boundary) => {
@@ -552,7 +548,7 @@ const points = getPointFeatures(
         });
       }
     }
-  }
+
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) {
