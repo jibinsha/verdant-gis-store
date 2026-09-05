@@ -122,7 +122,6 @@ export async function createDatasetWithFiles({
   if (!supabase) throw new Error("Supabase is not configured.");
 
 
-294b3d6 (Update Verdant GIS Store)
   const slugBase = title.toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
