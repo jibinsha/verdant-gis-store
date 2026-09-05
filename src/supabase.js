@@ -120,35 +120,7 @@ export async function createDatasetWithFiles({
   previewFile, previewImageFile, sourceFile
 }) {
   if (!supabase) throw new Error("Supabase is not configured.");
-HEAD
-  if (!previewFile) {
-    throw new Error("GeoJSON preview is required for Map Explorer.");
-  }
 
-  // Do not publish a dataset with a missing/invalid GeoJSON preview.
-  // The preview is what powers the interactive Map Explorer layer.
-  try {
-    const previewText = await previewFile.text();
-    const previewJson = JSON.parse(previewText);
-
-    if (
-      !previewJson ||
-      !["FeatureCollection", "Feature", "GeometryCollection"].includes(
-        previewJson.type
-      )
-    ) {
-      throw new Error(
-        "The uploaded Map Explorer preview must be valid GeoJSON."
-      );
-    }
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      throw new Error(
-        "The uploaded Map Explorer preview is not valid JSON/GeoJSON."
-      );
-    }
-    throw error;
-  }
 
 294b3d6 (Update Verdant GIS Store)
   const slugBase = title.toLowerCase()
