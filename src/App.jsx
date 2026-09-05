@@ -170,12 +170,7 @@ function HeroWorldMap() {
           attribution='&copy; OpenStreetMap contributors'
           className="osm-night"
         />
-<TileLayer
-  url="https://realearth.ssec.wisc.edu/tiles/NightLightsColored/{z}/{x}/{y}.png"
-  attribution="Night Lights &copy; University of Wisconsin–Madison SSEC"
-  minZoom={0}
-  maxZoom={19}
-/>
+
         
 
         {markers.map((marker) => (
