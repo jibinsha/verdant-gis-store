@@ -166,6 +166,11 @@ function HeroWorldMap() {
         style={{ height: "100%", width: "100%" }}
       >
         <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; OpenStreetMap contributors'
+          className="osm-night"
+        />
+<TileLayer
   url="https://realearth.ssec.wisc.edu/tiles/NightLightsColored/{z}/{x}/{y}.png"
   attribution="Night Lights &copy; University of Wisconsin–Madison SSEC"
   minZoom={0}
