@@ -120,7 +120,7 @@ export async function createDatasetWithFiles({
   previewFile, previewImageFile, sourceFile
 }) {
   if (!supabase) throw new Error("Supabase is not configured.");
-
+HEAD
   if (!previewFile) {
     throw new Error("GeoJSON preview is required for Map Explorer.");
   }
@@ -150,20 +150,31 @@ export async function createDatasetWithFiles({
     throw error;
   }
 
+294b3d6 (Update Verdant GIS Store)
   const slugBase = title.toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
   const slug = `${slugBase}-${Date.now().toString(36)}`;
 
-  const previewPath = `${slug}/preview.geojson`;
-  const { error: previewError } = await supabase.storage
-    .from("dataset-previews")
-    .upload(previewPath, previewFile, {
-      upsert: true,
-      contentType: "application/geo+json",
-      cacheControl: "31536000",
-    });
-  if (previewError) throw previewError;
+  let previewUrl = null;
+
+  if (previewFile) {
+    const previewPath = `${slug}/preview.geojson`;
+    const { error: previewError } = await supabase.storage
+      .from("dataset-previews")
+      .upload(previewPath, previewFile, {
+        upsert: true,
+        contentType: "application/geo+json",
+        cacheControl: "31536000",
+      });
+    if (previewError) throw previewError;
+
+    const { data: publicData } = supabase.storage
+      .from("dataset-previews")
+      .getPublicUrl(previewPath);
+
+    previewUrl = publicData?.publicUrl || null;
+  }
 
   let thumbnailUrl = null;
 
@@ -201,8 +212,6 @@ export async function createDatasetWithFiles({
     if (sourceError) throw sourceError;
   }
 
-  const { data: publicData } = supabase.storage.from("dataset-previews").getPublicUrl(previewPath);
-
   const { data, error } = await supabase.from("datasets").insert({
     slug,
     title,
@@ -218,7 +227,7 @@ export async function createDatasetWithFiles({
     source,
     updated_label: updatedLabel || new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
     thumbnail_url: thumbnailUrl,
-    preview_geojson_url: publicData.publicUrl,
+    preview_geojson_url: previewUrl,
     download_path: downloadPath,
     status: "published"
   }).select("*").single();

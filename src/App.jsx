@@ -3374,6 +3374,11 @@ function Explore() {
   }, [requestedCategory]);
 
   const filteredRows = rows.filter((d) => {
+    // Map Explorer requires an uploaded GeoJSON preview.
+    // Datasets without GeoJSON can still be published and remain
+    // available in the catalogue/store; they are simply excluded here.
+    if (!d.preview_geojson_url) return false;
+
     const matchesCategory =
       category === "All" ||
       slugifyCategory(d.category) === category ||
@@ -6736,12 +6741,6 @@ function AdminUpload() {
 
     setStatus("");
 
-    if (!previewFile) {
-      return setStatus(
-        "Please upload a GeoJSON preview file for Map Explorer."
-      );
-    }
-
     if (!form.title.trim()) {
       return setStatus(
         "Dataset title is required."
@@ -7115,7 +7114,7 @@ function AdminUpload() {
 
             <label className="file-drop">
               Map Explorer preview —
-              GeoJSON *
+              GeoJSON (optional)
 
               <input
                 id="preview-upload"
@@ -7153,7 +7152,7 @@ function AdminUpload() {
               <span>
                 {previewFile
                   ? `✓ ${previewFile.name}`
-                  : "Used only by Map Explorer for the interactive GIS layer."}
+                  : "Optional. Upload GeoJSON only if this dataset should appear in Map Explorer."}
               </span>
             </label>
 
