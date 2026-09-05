@@ -56,10 +56,6 @@ export async function getDatasets() {
       "id,slug,title,description,category_id,location,coverage,price,currency,formats,feature_count,crs,file_size,source,updated_label,thumbnail_url,preview_geojson_url,download_path,status,created_at,updated_at,categories(name)"
     )
     .eq("status", "published")
-    // Map Explorer can only display datasets that have a GeoJSON preview.
-    // Keep published catalogue records without a preview out of the map.
-    .not("preview_geojson_url", "is", null)
-    .neq("preview_geojson_url", "")
     .order("created_at", { ascending: false });
 
   if (!result.error) {
@@ -121,8 +117,7 @@ export async function createDatasetWithFiles({
 }) {
   if (!supabase) throw new Error("Supabase is not configured.");
 
-
-  const slugBase = title.toLowerCase()
+   const slugBase = title.toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
   const slug = `${slugBase}-${Date.now().toString(36)}`;

@@ -3354,11 +3354,18 @@ function Explore() {
           location: d.location || d.coverage || "India",
         }));
 
-        setRows(datasets);
+        // Map Explorer only lists published datasets that have
+        // an uploaded GeoJSON preview. Other published datasets
+        // remain available in the normal catalogue/store.
+        const explorableDatasets = datasets.filter(
+          (d) => d.preview_geojson_url
+        );
+
+        setRows(explorableDatasets);
         setCategories(categoriesResult.data || []);
 
         const initial = requestedCategory === "All"
-          ? datasets[0]
+          ? explorableDatasets[0]
           : datasets.find(
               (d) =>
                 slugifyCategory(d.category) === requestedCategory
