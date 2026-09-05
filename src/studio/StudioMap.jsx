@@ -388,88 +388,72 @@ export default function StudioMap({
     markersRef.current = [];
   }
 
-  function render() {
-    const map = mapRef.current;
+function render() {
+  const map = mapRef.current;
 
-    if (!map || !map.isStyleLoaded()) return;
+  if (!map || !map.isStyleLoaded()) return;
 
-    if (fitListenerRef.current) {
-      map.off("idle", fitListenerRef.current);
-      fitListenerRef.current = null;
-    }
+  if (fitListenerRef.current) {
+    map.off("idle", fitListenerRef.current);
+    fitListenerRef.current = null;
+  }
 
-    fitTimeoutsRef.current.forEach((timeoutId) =>
-      window.clearTimeout(timeoutId)
-    );
-    fitTimeoutsRef.current = [];
+  fitTimeoutsRef.current.forEach((timeoutId) =>
+    window.clearTimeout(timeoutId)
+  );
+  fitTimeoutsRef.current = [];
 
-    removeStudioLayers(map);
-    removeMarkers();
+  removeStudioLayers(map);
+  removeMarkers();
 
-const activeLayer =
-  (layers || []).find(
-    (layer) => layer?.id === activeLayerId
-  ) ||
-  (layers || []).find(
-    (layer) => getPointFeatures([layer]).length > 0
-  ) ||
-  null;
+  const activeLayer =
+    (layers || []).find(
+      (layer) => layer?.id === activeLayerId
+    ) ||
+    (layers || []).find(
+      (layer) => getPointFeatures([layer]).length > 0
+    ) ||
+    null;
 
-const points = activeLayer
-  ? getPointFeatures([activeLayer])
-  : [];
+  const points = activeLayer
+    ? getPointFeatures([activeLayer])
+    : [];
 
-console.log("[StudioMap] MARKER DATA", {
-  activeLayerId,
-  activeLayer,
-  layersCount: layers?.length,
-  layerIds: (layers || []).map((l) => l?.id),
-  layerNames: (layers || []).map((l) => l?.name),
-  pointsCount: points.length,
-  points
-});
-
-if (!points.length && layers?.length) {
-  console.warn("[StudioMap] Layer exists but no point features found", {
+  console.log("[StudioMap] MARKER DATA", {
     activeLayerId,
-    layers
+    activeLayer,
+    layersCount: layers?.length,
+    layerIds: (layers || []).map((l) => l?.id),
+    layerNames: (layers || []).map((l) => l?.name),
+    pointsCount: points.length,
+    points
   });
-}
-    console.log("[StudioMap] RENDER", {
-      activeLayerId,
-      layers,
-      activeLayer,
-      pointCount: points.length,
-      points
+
+  // Draw boundaries first.
+  (boundaries || []).forEach((boundary) => {
+    addBoundary(
+      map,
+      boundary,
+      boundary.id === selectedBoundaryId ||
+        boundary?.sourceType === "upload"
+    );
+  });
+
+  // Draw IDW interpolation only when requested.
+  if (
+    mapMode === "interpolation" &&
+    analysisResult?.geojson?.features?.length
+  ) {
+    const sourceId =
+      `${SOURCE_PREFIX}analysis`;
+
+    map.addSource(sourceId, {
+      type: "geojson",
+      data: analysisResult.geojson
     });
-    // Boundary library layers.
-    (boundaries || []).forEach((boundary) => {
-      addBoundary(
-        map,
-        boundary,
-        boundary.id === selectedBoundaryId ||
-          boundary?.sourceType === "upload"
-      );
-    });
 
-    const uploadedBoundaryFeatures = (boundaries || [])
-      .filter((boundary) => boundary?.sourceType === "upload")
-      .flatMap((boundary) => boundary?.geojson?.features || []);
-
-    // Publication-style IDW surface.
-    if (
-      mapMode === "interpolation" &&
-      analysisResult?.geojson?.features?.length
-    ) {
-      const sourceId =
-        `${SOURCE_PREFIX}analysis`;
-
-      map.addSource(sourceId, {
-        type: "geojson",
-        data: analysisResult.geojson
-      });
-
-      const values = analysisResult.geojson.features
+    const values =
+      analysisResult.geojson.features
         .map((feature) =>
           Number(
             feature.properties?.[
@@ -479,104 +463,106 @@ if (!points.length && layers?.length) {
         )
         .filter(Number.isFinite);
 
-      const min = values.length
-        ? Math.min(...values)
-        : 0;
+    const min = values.length
+      ? Math.min(...values)
+      : 0;
 
-      const max = values.length
-        ? Math.max(...values)
-        : 1;
+    const max = values.length
+      ? Math.max(...values)
+      : 1;
 
-      const range =
-        max === min ? 1 : max - min;
+    const range =
+      max === min ? 1 : max - min;
 
-      map.addLayer({
-        id: `${LAYER_PREFIX}analysis-fill`,
-        type: "fill",
-        source: sourceId,
-        filter: [
-          "any",
-          ["==", ["geometry-type"], "Polygon"],
-          ["==", ["geometry-type"], "MultiPolygon"]
-        ],
-        paint: {
-          "fill-opacity": 0.78,
-          "fill-color": [
-            "interpolate",
-            ["linear"],
+    map.addLayer({
+      id: `${LAYER_PREFIX}analysis-fill`,
+      type: "fill",
+      source: sourceId,
+      filter: [
+        "any",
+        ["==", ["geometry-type"], "Polygon"],
+        ["==", ["geometry-type"], "MultiPolygon"]
+      ],
+      paint: {
+        "fill-opacity": 0.78,
+        "fill-color": [
+          "interpolate",
+          ["linear"],
+          [
+            "coalesce",
             [
-              "coalesce",
+              "to-number",
               [
-                "to-number",
-                [
-                  "get",
-                  analysisResult.valueField
-                ]
-              ],
-              min
+                "get",
+                analysisResult.valueField
+              ]
             ],
+            min
+          ],
 
-            min,
-            IDW_PALETTES[idwPalette][0],
+          min,
+          IDW_PALETTES[idwPalette][0],
 
-            min + range * 0.25,
-            IDW_PALETTES[idwPalette][
-              Math.floor(
-                IDW_PALETTES[idwPalette].length * 0.25
-              )
-            ],
+          min + range * 0.25,
+          IDW_PALETTES[idwPalette][
+            Math.floor(
+              IDW_PALETTES[idwPalette].length * 0.25
+            )
+          ],
 
-            min + range * 0.5,
-            IDW_PALETTES[idwPalette][
-              Math.floor(
-                IDW_PALETTES[idwPalette].length * 0.5
-              )
-            ],
+          min + range * 0.5,
+          IDW_PALETTES[idwPalette][
+            Math.floor(
+              IDW_PALETTES[idwPalette].length * 0.5
+            )
+          ],
 
-            min + range * 0.75,
-            IDW_PALETTES[idwPalette][
-              Math.floor(
-                IDW_PALETTES[idwPalette].length * 0.75
-              )
-            ],
+          min + range * 0.75,
+          IDW_PALETTES[idwPalette][
+            Math.floor(
+              IDW_PALETTES[idwPalette].length * 0.75
+            )
+          ],
 
-            max,
-            IDW_PALETTES[idwPalette][
-              IDW_PALETTES[idwPalette].length - 1
-            ]
+          max,
+          IDW_PALETTES[idwPalette][
+            IDW_PALETTES[idwPalette].length - 1
           ]
-        }
-      });
+        ]
+      }
+    });
+  }
 
-      // Keep sampling points as DOM markers. This is deliberately retained
-      // for reliability: markers remain visible independently of the basemap
-      // style/source stack and are recreated whenever the active CSV changes.
-      // removeMarkers() above guarantees deleted/replaced CSV layers cannot
-      // leave stale points behind.
-if (showPoints && points.length) {
-      points.forEach((feature, index) => {
-        const props = feature.properties || {};
+  // IMPORTANT:
+  // Sampling points are deliberately OUTSIDE the interpolation block.
+  // Therefore they appear in Location map AND IDW map.
+  if (showPoints && points.length) {
+    points.forEach((feature, index) => {
+      const props = feature.properties || {};
 
-        const label =
-          props["Sample no."] ||
-          props.Sample ||
-          props.Name ||
-          props.name ||
-          `Location ${index + 1}`;
+      const label =
+        props["Sample no."] ||
+        props.Sample ||
+        props.Name ||
+        props.name ||
+        `Location ${index + 1}`;
 
-        const marker = new Marker({
-          element: markerElement(pointSize),
-          anchor: "center"
-        })
-          .setLngLat(feature.geometry.coordinates)
-          .setPopup(
-            new Popup({ offset: 12 }).setText(String(label))
+      const marker = new Marker({
+        element: markerElement(pointSize),
+        anchor: "center"
+      })
+        .setLngLat(feature.geometry.coordinates)
+        .setPopup(
+          new Popup({ offset: 12 }).setText(
+            String(label)
           )
-          .addTo(map);
+        )
+        .addTo(map);
 
-        markersRef.current.push(marker);
-      });
-    }
+      markersRef.current.push(marker);
+    });
+  }
+}
   useEffect(() => {
     if (!containerRef.current || mapRef.current) {
       return;
