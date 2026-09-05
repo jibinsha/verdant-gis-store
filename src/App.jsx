@@ -7121,13 +7121,33 @@ function AdminUpload() {
                 id="preview-upload"
                 type="file"
                 accept=".geojson,.json,application/geo+json,application/json"
-                onChange={(e) =>
-                  setPreviewFile(
-                    e.target
-                      .files?.[0] ||
-                      null
-                  )
-                }
+                onChange={(e) => {
+                  const file =
+                    e.target.files?.[0] ||
+                    null;
+
+                  if (!file) {
+                    setPreviewFile(null);
+                    return;
+                  }
+
+                  const name = file.name.toLowerCase();
+
+                  if (
+                    !name.endsWith(".geojson") &&
+                    !name.endsWith(".json")
+                  ) {
+                    setPreviewFile(null);
+                    e.target.value = "";
+                    setStatus(
+                      "Please upload a GeoJSON preview file (.geojson or .json) for Map Explorer."
+                    );
+                    return;
+                  }
+
+                  setStatus("");
+                  setPreviewFile(file);
+                }}
               />
 
               <span>

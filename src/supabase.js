@@ -56,6 +56,10 @@ export async function getDatasets() {
       "id,slug,title,description,category_id,location,coverage,price,currency,formats,feature_count,crs,file_size,source,updated_label,thumbnail_url,preview_geojson_url,download_path,status,created_at,updated_at,categories(name)"
     )
     .eq("status", "published")
+    // Map Explorer can only display datasets that have a GeoJSON preview.
+    // Keep published catalogue records without a preview out of the map.
+    .not("preview_geojson_url", "is", null)
+    .neq("preview_geojson_url", "")
     .order("created_at", { ascending: false });
 
   if (!result.error) {
@@ -119,6 +123,31 @@ export async function createDatasetWithFiles({
 
   if (!previewFile) {
     throw new Error("GeoJSON preview is required for Map Explorer.");
+  }
+
+  // Do not publish a dataset with a missing/invalid GeoJSON preview.
+  // The preview is what powers the interactive Map Explorer layer.
+  try {
+    const previewText = await previewFile.text();
+    const previewJson = JSON.parse(previewText);
+
+    if (
+      !previewJson ||
+      !["FeatureCollection", "Feature", "GeometryCollection"].includes(
+        previewJson.type
+      )
+    ) {
+      throw new Error(
+        "The uploaded Map Explorer preview must be valid GeoJSON."
+      );
+    }
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error(
+        "The uploaded Map Explorer preview is not valid JSON/GeoJSON."
+      );
+    }
+    throw error;
   }
 
   const slugBase = title.toLowerCase()
