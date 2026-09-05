@@ -43,6 +43,9 @@ export default function StudioPage() {
   const [focusRequest, setFocusRequest] = useState(0);
   const [focusTarget, setFocusTarget] = useState(null);
   const [autoLocationLoading, setAutoLocationLoading] = useState(false);
+  // Map Layout is available only after the backend has successfully
+  // resolved at least one permanent study boundary for the active dataset.
+  const [studyLocationReady, setStudyLocationReady] = useState(false);
 
   const activeLayer = useMemo(
     () => layers.find((layer) => layer.id === activeLayerId) || null,
@@ -173,6 +176,7 @@ export default function StudioPage() {
     if (!activeLayer) {
       setRecommendedBoundaryLevel(null);
       setAutoLocationLoading(false);
+      setStudyLocationReady(false);
       return;
     }
 
@@ -186,6 +190,7 @@ export default function StudioPage() {
     );
     setRecommendedBoundaryLevel(null);
     setAutoLocationLoading(true);
+    setStudyLocationReady(false);
 
     getPermanentBoundaryResolution(pointFeatures)
       .then((resolution) => {
@@ -197,6 +202,10 @@ export default function StudioPage() {
           ...boundary,
           sourceType: "backend"
         }));
+
+        // A successful HTTP response is not enough by itself. Unlock the
+        // layout only when the backend actually returned a study boundary.
+        setStudyLocationReady(backend.length > 0);
 
         setRecommendedBoundaryLevel(
           resolution?.recommendedLevel || null
@@ -220,6 +229,7 @@ export default function StudioPage() {
         );
 
         setRecommendedBoundaryLevel(null);
+        setStudyLocationReady(false);
       });
 
     return () => {
@@ -274,6 +284,16 @@ export default function StudioPage() {
   function openLayout() {
     if (!activeLayer) {
       window.alert("Upload a coordinate CSV first.");
+      return;
+    }
+
+    if (autoLocationLoading) {
+      window.alert("Study location is still loading. Please wait for it to finish before opening Map Layout.");
+      return;
+    }
+
+    if (!studyLocationReady) {
+      window.alert("Study location has not been fetched successfully yet. Please wait for the study location to load before opening Map Layout.");
       return;
     }
 
