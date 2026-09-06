@@ -59,3 +59,20 @@ Do not make the bucket public.
 4. Browser downloads directly from private R2.
 
 Existing datasets whose `download_path` points to the old Supabase Storage bucket continue to use the legacy download path.
+
+## Verdant AI / Experiential Labs
+
+The website includes a public Verdant AI support assistant powered through Experiential Labs.
+Add these variables to the Render backend only:
+
+```env
+EXPLABS_API_KEY=YOUR_EXPERIENTIAL_LABS_API_KEY
+EXPLABS_MODEL=gpt-6-astra
+EXPLABS_BASE_URL=https://api.experientiallabs.ai/v1
+```
+
+Never put the Experiential Labs key in a `VITE_` variable or in the frontend source.
+The browser calls `/api/ai/chat`; Render calls Experiential Labs and streams the answer back.
+
+The WhatsApp support button opens:
+`https://wa.me/917306695292`

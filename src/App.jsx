@@ -37,6 +37,8 @@ import {
   Mail,
   Phone,
   Send,
+  Bot,
+  MessageCircle,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import StudioPage from "./studio/StudioPage";
@@ -1365,6 +1367,346 @@ function GISMap({
 const PAYMENT_API =
   import.meta.env.VITE_PAYMENT_API_URL ||
   "http://localhost:8787";
+
+
+function WhatsAppMark({ size = 24 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      aria-hidden="true"
+      fill="none"
+    >
+      <path
+        d="M16 3.1c-7.13 0-12.91 5.78-12.91 12.91 0 2.28.6 4.51 1.73 6.48L3.2 28.9l6.6-1.57A12.86 12.86 0 0 0 16 28.92c7.13 0 12.91-5.78 12.91-12.91S23.13 3.1 16 3.1Z"
+        fill="currentColor"
+      />
+      <path
+        d="M12.06 9.64c.28-.06.6-.03.82.41l1.02 2.42c.13.31.1.57-.08.82l-.62.8c-.18.23-.21.43-.08.68.4.76 1.05 1.49 1.75 2.03.73.56 1.51.98 2.34 1.27.27.1.45.04.62-.16l.73-.87c.2-.24.46-.31.75-.2l2.34 1.1c.35.16.48.35.43.69-.14 1.01-.63 1.83-1.54 2.24-.58.26-1.3.28-1.96.14-1.58-.34-3.47-1.38-5.12-2.76-1.5-1.25-2.76-2.76-3.48-4.25-.5-1.04-.78-2.2-.46-3.2.24-.76.83-1.28 1.54-1.42Z"
+        fill="#fff"
+      />
+    </svg>
+  );
+}
+
+function VerdantAIChat() {
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState([
+    {
+      role: "assistant",
+      content:
+        "Hello! I'm Verdant AI. I can help you find GIS datasets, understand formats and CRS, choose data for QGIS or ArcGIS, and guide you through purchasing and downloads.",
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const endRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  const suggestions = [
+    "Which GIS datasets do you have for Kerala?",
+    "Which format is best for QGIS?",
+    "How do I purchase and download a dataset?",
+  ];
+
+  useEffect(() => {
+    if (!open) return;
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [messages, open, busy]);
+
+  useEffect(() => {
+    if (!open) return;
+    const timer = window.setTimeout(() => textareaRef.current?.focus(), 80);
+    return () => window.clearTimeout(timer);
+  }, [open]);
+
+  function closeChat() {
+    if (busy) return;
+    setOpen(false);
+  }
+
+  function resetChat() {
+    if (busy) return;
+    setMessages([
+      {
+        role: "assistant",
+        content:
+          "Hello! I'm Verdant AI. I can help you find GIS datasets, understand formats and CRS, choose data for QGIS or ArcGIS, and guide you through purchasing and downloads.",
+      },
+    ]);
+    setError("");
+  }
+
+  async function sendMessage(event, forcedText = null) {
+    event?.preventDefault();
+
+    const text = String(forcedText ?? input).trim();
+    if (!text || busy) return;
+
+    if (text.length > 1200) {
+      setError("Please keep your message below 1,200 characters.");
+      return;
+    }
+
+    const nextMessages = [...messages, { role: "user", content: text }];
+    setMessages(nextMessages);
+    setInput("");
+    setError("");
+    setBusy(true);
+
+    try {
+      const response = await fetch(`${PAYMENT_API}/api/ai/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: nextMessages
+            .filter((message) => message.role === "user" || message.role === "assistant")
+            .slice(-12),
+        }),
+      });
+
+      if (!response.ok || !response.body) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(
+          body.error || "Verdant AI is temporarily unavailable."
+        );
+      }
+
+      setMessages((current) => [
+        ...current,
+        { role: "assistant", content: "" },
+      ]);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        const events = buffer.split("\n\n");
+        buffer = events.pop() || "";
+
+        for (const eventBlock of events) {
+          const dataLine = eventBlock
+            .split("\n")
+            .find((line) => line.startsWith("data:"));
+
+          if (!dataLine) continue;
+
+          const payload = dataLine.slice(5).trim();
+          if (!payload || payload === "[DONE]") continue;
+
+          let parsed;
+          try {
+            parsed = JSON.parse(payload);
+          } catch {
+            continue;
+          }
+
+          if (parsed.error) {
+            throw new Error(parsed.error);
+          }
+
+          const delta =
+            parsed?.choices?.[0]?.delta?.content ??
+            parsed?.choices?.[0]?.message?.content ??
+            "";
+
+          if (!delta) continue;
+
+          setMessages((current) => {
+            const copy = [...current];
+            const last = copy[copy.length - 1];
+            if (!last || last.role !== "assistant") return current;
+            copy[copy.length - 1] = {
+              ...last,
+              content: `${last.content || ""}${delta}`,
+            };
+            return copy;
+          });
+        }
+      }
+    } catch (err) {
+      setError(err?.message || "Could not connect to Verdant AI.");
+      setMessages((current) => {
+        if (current[current.length - 1]?.role === "assistant" &&
+            !current[current.length - 1]?.content) {
+          return current.slice(0, -1);
+        }
+        return current;
+      });
+    } finally {
+      setBusy(false);
+      window.setTimeout(() => textareaRef.current?.focus(), 50);
+    }
+  }
+
+  return (
+    <>
+      <div className={`verdant-support-stack ${open ? "chat-open" : ""}`}>
+        {open && (
+          <section className="verdant-ai-panel" aria-label="Verdant AI assistant">
+            <header className="verdant-ai-header">
+              <div className="verdant-ai-identity">
+                <div className="verdant-ai-avatar">
+                  <Bot size={19} />
+                </div>
+                <div>
+                  <strong>Verdant AI</strong>
+                  <span><i /> GIS & dataset support</span>
+                </div>
+              </div>
+
+              <div className="verdant-ai-head-actions">
+                <button
+                  type="button"
+                  className="verdant-ai-head-btn"
+                  onClick={resetChat}
+                  disabled={busy}
+                  aria-label="Start a new chat"
+                  title="New chat"
+                >
+                  <RefreshCw size={15} />
+                </button>
+                <button
+                  type="button"
+                  className="verdant-ai-head-btn"
+                  onClick={closeChat}
+                  disabled={busy}
+                  aria-label="Close Verdant AI"
+                >
+                  <X size={17} />
+                </button>
+              </div>
+            </header>
+
+            <div className="verdant-ai-status">
+              <span className="verdant-ai-status-dot" />
+              <span>AI assistant</span>
+              <span className="verdant-ai-status-separator">•</span>
+              <span>Ask about GIS data, QGIS & more</span>
+            </div>
+
+            <div className="verdant-ai-messages" role="log" aria-live="polite">
+              {messages.map((message, index) => (
+                <div
+                  className={`verdant-ai-message-row ${message.role}`}
+                  key={`${message.role}-${index}`}
+                >
+                  {message.role === "assistant" && (
+                    <div className="verdant-ai-mini-avatar">
+                      <Bot size={13} />
+                    </div>
+                  )}
+                  <div className="verdant-ai-bubble">
+                    {message.content || (
+                      <span className="verdant-ai-typing">
+                        <i /><i /><i />
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {messages.length === 1 && !busy && (
+                <div className="verdant-ai-suggestions">
+                  <span>Popular questions</span>
+                  {suggestions.map((suggestion) => (
+                    <button
+                      type="button"
+                      key={suggestion}
+                      onClick={() => sendMessage(null, suggestion)}
+                    >
+                      {suggestion}
+                      <ArrowRight size={13} />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div ref={endRef} />
+            </div>
+
+            {error && (
+              <div className="verdant-ai-error" role="alert">
+                <span>{error}</span>
+                <button type="button" onClick={() => setError("")}>×</button>
+              </div>
+            )}
+
+            <form className="verdant-ai-composer" onSubmit={sendMessage}>
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    sendMessage(event);
+                  }
+                }}
+                placeholder="Ask Verdant AI anything..."
+                rows={1}
+                maxLength={1200}
+                disabled={busy}
+                aria-label="Message Verdant AI"
+              />
+              <button
+                type="submit"
+                className="verdant-ai-send"
+                disabled={!input.trim() || busy}
+                aria-label="Send message"
+              >
+                {busy ? <LoaderCircle size={17} className="spin" /> : <Send size={17} />}
+              </button>
+            </form>
+
+            <div className="verdant-ai-disclaimer">
+              AI can make mistakes. For purchases and account issues, verify details before acting.
+            </div>
+          </section>
+        )}
+
+        <div className="verdant-floating-actions">
+          <a
+            className="verdant-whatsapp-button"
+            href="https://wa.me/917306695292?text=Hi%20Verdant%20GIS%2C%20I%20need%20help%20with%20a%20GIS%20dataset."
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Chat with Verdant GIS on WhatsApp"
+            title="WhatsApp Verdant GIS"
+          >
+            <WhatsAppMark size={25} />
+            <span>WhatsApp</span>
+          </a>
+
+          <button
+            type="button"
+            className="verdant-ai-launcher"
+            onClick={() => setOpen((value) => !value)}
+            aria-expanded={open}
+            aria-label={open ? "Close Verdant AI" : "Open Verdant AI"}
+          >
+            <span className="verdant-ai-launcher-icon">
+              {open ? <X size={23} /> : <Bot size={23} />}
+            </span>
+            <span className="verdant-ai-launcher-label">
+              <strong>{open ? "Close" : "Verdant AI"}</strong>
+              <small>{open ? "Chat window" : "Ask about GIS data"}</small>
+            </span>
+            {!open && <span className="verdant-ai-launcher-pulse" />}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
 
 
 async function getAccessToken() {
@@ -7403,6 +7745,7 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
+      <VerdantAIChat />
 
       <Routes>
         <Route path="/" element={<Home />} />
