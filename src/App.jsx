@@ -7731,26 +7731,37 @@ function ScrollToTop() {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    // Disable browser scroll restoration so mobile browsers
-    // don't restore the previous catalogue position.
     if ("scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual";
     }
 
-    // Scroll immediately
-    window.scrollTo(0, 0);
-
-    // Scroll again after the new page has rendered
-    const timer = window.setTimeout(() => {
+    const scrollToTop = () => {
       window.scrollTo({
         top: 0,
         left: 0,
-        behavior: "auto",
+        behavior: "instant",
       });
-    }, 50);
+
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+
+    // Run after React navigation
+    requestAnimationFrame(() => {
+      scrollToTop();
+
+      // Mobile browsers can restore scroll after navigation.
+      requestAnimationFrame(scrollToTop);
+    });
+
+    const timers = [
+      setTimeout(scrollToTop, 100),
+      setTimeout(scrollToTop, 300),
+      setTimeout(scrollToTop, 700),
+    ];
 
     return () => {
-      window.clearTimeout(timer);
+      timers.forEach(clearTimeout);
     };
   }, [pathname]);
 
@@ -8327,6 +8338,16 @@ function DatasetPageRemote({ d }) {
    * DYNAMIC SEO FOR INDIVIDUAL GIS DATASET PAGES
    * =========================================================
    */
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant",
+    });
+
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [d.slug]);
 
   useEffect(() => {
     const siteName = "Verdant GIS";
