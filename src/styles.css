@@ -2008,3 +2008,136 @@ footer { border-top:1px solid var(--line); background:#fff; }
     transition: none;
   }
 }
+
+/* =========================================================
+   VERDANT NAVBAR — PREMIUM COLOUR POLISH
+========================================================= */
+
+.nav {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(241, 249, 245, 0.98),
+      rgba(250, 253, 251, 0.98),
+      rgba(238, 248, 243, 0.98)
+    ) !important;
+  border-bottom: 1px solid #cfe3d9 !important;
+  box-shadow: 0 4px 22px rgba(15, 95, 70, 0.07);
+}
+
+/* Brand */
+.brand-mark {
+  background: linear-gradient(135deg, #087052, #15916d) !important;
+  box-shadow:
+    0 8px 22px rgba(8, 112, 82, 0.24),
+    0 0 0 4px rgba(21, 145, 109, 0.07);
+}
+
+.brand b {
+  color: #183b30;
+}
+
+.brand small {
+  color: #087052 !important;
+}
+
+/* Navigation links */
+.nav-links {
+  gap: 8px !important;
+  color: #49665b !important;
+}
+
+.nav-links a {
+  padding: 10px 13px;
+  border-radius: 10px;
+  color: #49665b !important;
+  transition:
+    background .18s ease,
+    color .18s ease,
+    transform .18s ease;
+}
+
+.nav-links a:hover {
+  color: #076b4d !important;
+  background: #dff2e9;
+  transform: translateY(-1px);
+}
+
+/* Cart button */
+.nav-actions .icon-btn {
+  width: 42px;
+  height: 42px;
+  border: 1px solid #cfe2d8 !important;
+  background: #ffffff !important;
+  color: #17634e;
+  box-shadow: 0 5px 15px rgba(15, 95, 70, .06);
+  transition: .18s ease;
+}
+
+.nav-actions .icon-btn:hover {
+  background: #e7f5ef !important;
+  border-color: #9fc9b7 !important;
+  color: #086b50;
+  transform: translateY(-1px);
+}
+
+/* Cart notification */
+.cart-dot {
+  background: #0b7656 !important;
+  border-color: #f1f9f5 !important;
+}
+
+/* Account button */
+.account-btn {
+  height: 42px;
+  padding: 0 17px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #086b4e, #0e8060) !important;
+  box-shadow:
+    0 7px 20px rgba(8, 107, 78, .20),
+    inset 0 1px 0 rgba(255,255,255,.12);
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease;
+}
+
+.account-btn:hover {
+  background: linear-gradient(135deg, #075f46, #0b7355) !important;
+  transform: translateY(-1px);
+  box-shadow:
+    0 10px 26px rgba(8, 107, 78, .27),
+    inset 0 1px 0 rgba(255,255,255,.14);
+}
+
+/* Mobile menu */
+.mobile-menu {
+  color: #0b6b50 !important;
+}
+
+.mobile-menu:hover {
+  background: #e2f2eb;
+  border-radius: 9px;
+}
+
+/* Mobile navigation */
+@media (max-width: 900px) {
+  .nav-links.open {
+    background:
+      linear-gradient(
+        180deg,
+        #f3faf6 0%,
+        #ffffff 100%
+      ) !important;
+    border-bottom: 1px solid #cfe3d9 !important;
+    box-shadow: 0 14px 30px rgba(15, 95, 70, .08);
+  }
+
+  .nav-links.open a {
+    width: 100%;
+    padding: 12px 14px;
+  }
+
+  .nav-links.open a:hover {
+    background: #dff2e9;
+  }
+}
