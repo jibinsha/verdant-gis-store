@@ -1515,7 +1515,8 @@ footer { border-top:1px solid var(--line); background:#fff; }
   position: fixed;
   right: 22px;
   bottom: 22px;
-  z-index: 1200;
+  top: auto;
+  z-index: 99999;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -1529,8 +1530,8 @@ footer { border-top:1px solid var(--line); background:#fff; }
 
 .verdant-ai-panel {
   width: min(390px, calc(100vw - 28px));
-  height: min(650px, calc(100vh - 150px));
-  min-height: 470px;
+  height: min(650px, calc(100vh - 190px));
+  max-height: calc(100vh - 190px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1961,12 +1962,21 @@ footer { border-top:1px solid var(--line); background:#fff; }
     bottom: 12px;
     left: 12px;
   }
+  .verdant-support-stack.chat-open {
+    top: 86px;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    align-items: stretch;
+  }
 
   .verdant-ai-panel {
     width: 100%;
-    height: min(72vh, 610px);
-    min-height: 430px;
-    border-radius: 19px;
+    height: calc(100dvh - 100px);
+    max-height: calc(100dvh - 100px);
+    min-height: 0;
+    border-radius: 19px 19px 0 0;
   }
 
   .verdant-floating-actions {
