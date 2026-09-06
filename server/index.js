@@ -15,7 +15,12 @@ const required = [
   "SUPABASE_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
   "RAZORPAY_KEY_ID",
-  "RAZORPAY_KEY_SECRET"
+  "RAZORPAY_KEY_SECRET",
+  "R2_ACCOUNT_ID",
+  "R2_BUCKET_NAME",
+  "R2_ACCESS_KEY_ID",
+  "R2_SECRET_ACCESS_KEY",
+  "R2_ENDPOINT"
 ];
 
 for (const key of required) {
@@ -58,6 +63,149 @@ const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET
 });
+
+/* ============================================================
+   CLOUDFLARE R2 / S3 SIGNING
+
+   R2 uses the S3-compatible API. These helpers intentionally keep
+   the R2 credentials server-side and generate short-lived presigned
+   URLs for browser uploads/downloads.
+   ============================================================ */
+
+const R2_BUCKET = process.env.R2_BUCKET_NAME;
+const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
+const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
+const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
+const R2_ENDPOINT = process.env.R2_ENDPOINT;
+
+function r2Ready() {
+  return Boolean(
+    R2_BUCKET &&
+    R2_ACCOUNT_ID &&
+    R2_ACCESS_KEY_ID &&
+    R2_SECRET_ACCESS_KEY &&
+    R2_ENDPOINT
+  );
+}
+
+function encodeRfc3986(value) {
+  return encodeURIComponent(String(value))
+    .replace(/[!'()*]/g, c =>
+      `%${c.charCodeAt(0).toString(16).toUpperCase()}`
+    );
+}
+
+function encodeR2Path(key) {
+  return String(key)
+    .split("/")
+    .map(encodeRfc3986)
+    .join("/");
+}
+
+function hmac(key, value, encoding) {
+  return crypto
+    .createHmac("sha256", key)
+    .update(value)
+    .digest(encoding);
+}
+
+function sha256(value) {
+  return crypto
+    .createHash("sha256")
+    .update(value)
+    .digest("hex");
+}
+
+function r2Host() {
+  return `${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+}
+
+function r2EndpointBase() {
+  return String(R2_ENDPOINT).replace(/\/+$/, "");
+}
+
+function createR2PresignedUrl({
+  method,
+  key,
+  expiresIn = 900,
+  responseContentDisposition = null
+}) {
+  if (!r2Ready()) {
+    throw new Error("R2 storage is not configured on the server.");
+  }
+
+  const now = new Date();
+  const iso = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  const dateStamp = iso.slice(0, 8);
+  const credentialScope = `${dateStamp}/auto/s3/aws4_request`;
+  const host = r2Host();
+  const canonicalUri = `/${encodeRfc3986(R2_BUCKET)}/${encodeR2Path(key)}`;
+
+  const params = {
+    "X-Amz-Algorithm": "AWS4-HMAC-SHA256",
+    "X-Amz-Credential": `${R2_ACCESS_KEY_ID}/${credentialScope}`,
+    "X-Amz-Date": iso,
+    "X-Amz-Expires": String(Math.min(Math.max(Number(expiresIn) || 900, 1), 604800)),
+    "X-Amz-SignedHeaders": "host"
+  };
+
+  if (responseContentDisposition) {
+    params["response-content-disposition"] = responseContentDisposition;
+  }
+
+  const canonicalQuery = Object.keys(params)
+    .sort()
+    .map(keyName => `${encodeRfc3986(keyName)}=${encodeRfc3986(params[keyName])}`)
+    .join("&");
+
+  const canonicalHeaders = `host:${host}\n`;
+  const canonicalRequest = [
+    method.toUpperCase(),
+    canonicalUri,
+    canonicalQuery,
+    canonicalHeaders,
+    "host",
+    "UNSIGNED-PAYLOAD"
+  ].join("\n");
+
+  const stringToSign = [
+    "AWS4-HMAC-SHA256",
+    iso,
+    credentialScope,
+    sha256(canonicalRequest)
+  ].join("\n");
+
+  const kDate = hmac(`AWS4${R2_SECRET_ACCESS_KEY}`, dateStamp);
+  const kRegion = hmac(kDate, "auto");
+  const kService = hmac(kRegion, "s3");
+  const kSigning = hmac(kService, "aws4_request");
+  const signature = hmac(kSigning, stringToSign, "hex");
+
+  return `${r2EndpointBase()}/${encodeRfc3986(R2_BUCKET)}/${encodeR2Path(key)}?${canonicalQuery}&X-Amz-Signature=${signature}`;
+}
+
+function sanitizeR2Filename(filename) {
+  const base = String(filename || "dataset")
+    .replace(/\\/g, "/")
+    .split("/")
+    .pop()
+    .trim();
+
+  const safe = base
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 180);
+
+  return safe || "dataset-file";
+}
+
+function safeDatasetSlug(slug) {
+  const value = String(slug || "").trim();
+  if (!/^[a-z0-9][a-z0-9-]{1,140}$/i.test(value)) {
+    return null;
+  }
+  return value;
+}
 
 function timingSafeHexEqual(a, b) {
   if (
@@ -240,6 +388,126 @@ app.use(
     limit: "100kb"
   })
 );
+
+/* ============================================================
+   ADMIN R2 UPLOAD / DELETE
+   ============================================================ */
+
+app.post("/api/admin/r2/upload-url", authenticate, async (req, res) => {
+  try {
+    if (!r2Ready()) {
+      return res.status(503).json({
+        error: "R2 storage is not configured on the server."
+      });
+    }
+
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("role")
+      .eq("id", req.user.id)
+      .maybeSingle();
+
+    if (profileError) throw profileError;
+
+    if (profile?.role !== "admin") {
+      return res.status(403).json({
+        error: "Admin access is required."
+      });
+    }
+
+    const slug = safeDatasetSlug(req.body?.slug);
+    const filename = sanitizeR2Filename(req.body?.filename);
+    const contentType = String(req.body?.contentType || "application/octet-stream").slice(0, 200);
+    const size = Number(req.body?.size || 0);
+
+    if (!slug) {
+      return res.status(400).json({ error: "A valid dataset slug is required." });
+    }
+
+    if (!filename) {
+      return res.status(400).json({ error: "A source filename is required." });
+    }
+
+    // Single PUT is appropriate for the current 500 MB-ish datasets.
+    // Larger future datasets should use R2 multipart upload.
+    const maxSingleUploadBytes = 5 * 1024 * 1024 * 1024;
+    if (!Number.isFinite(size) || size <= 0) {
+      return res.status(400).json({ error: "The source file size is invalid." });
+    }
+
+    if (size > maxSingleUploadBytes) {
+      return res.status(413).json({
+        error: "This source file is larger than the current 5 GB single-upload limit."
+      });
+    }
+
+    const objectKey = `datasets/${slug}/${filename}`;
+    const uploadUrl = createR2PresignedUrl({
+      method: "PUT",
+      key: objectKey,
+      expiresIn: 1800
+    });
+
+    return res.json({
+      uploadUrl,
+      objectKey,
+      expiresIn: 1800
+    });
+  } catch (error) {
+    console.error("[Verdant GIS] R2 upload URL error:", error);
+    return res.status(500).json({
+      error: error?.message || "Could not prepare R2 upload."
+    });
+  }
+});
+
+app.post("/api/admin/r2/delete", authenticate, async (req, res) => {
+  try {
+    if (!r2Ready()) {
+      return res.status(503).json({
+        error: "R2 storage is not configured on the server."
+      });
+    }
+
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("role")
+      .eq("id", req.user.id)
+      .maybeSingle();
+
+    if (profileError) throw profileError;
+
+    if (profile?.role !== "admin") {
+      return res.status(403).json({ error: "Admin access is required." });
+    }
+
+    const objectKey = String(req.body?.objectKey || "").trim();
+    if (!objectKey || !objectKey.startsWith("datasets/")) {
+      return res.status(400).json({ error: "Invalid R2 object key." });
+    }
+
+    const deleteUrl = createR2PresignedUrl({
+      method: "DELETE",
+      key: objectKey,
+      expiresIn: 300
+    });
+
+    const response = await fetch(deleteUrl, { method: "DELETE" });
+
+    if (!response.ok && response.status !== 404) {
+      const text = await response.text().catch(() => "");
+      throw new Error(`R2 delete failed (${response.status})${text ? `: ${text}` : ""}`);
+    }
+
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error("[Verdant GIS] R2 delete error:", error);
+    return res.status(500).json({
+      error: error?.message || "Could not delete the R2 object."
+    });
+  }
+});
+
 
 /* ============================================================
    GIS STUDIO / PERMANENT BOUNDARIES
@@ -1104,7 +1372,72 @@ app.post(
       }
 
       /*
-       * 3. NORMALIZE STORAGE PATH
+       * 3. R2 DOWNLOADS
+       *
+       * New datasets store download_path as r2:<object-key>.
+       * The browser receives a short-lived GET URL and downloads directly
+       * from R2, so Render never buffers a 500 MB+ file in memory.
+       */
+
+      const storedPath = String(dataset.download_path).trim();
+
+      if (storedPath.startsWith("r2:")) {
+        const objectKey = storedPath.slice(3).trim();
+
+        if (!objectKey || !objectKey.startsWith("datasets/")) {
+          return res.status(404).json({
+            error: "The R2 dataset path is invalid."
+          });
+        }
+
+        const baseName =
+          dataset.title ||
+          dataset.slug ||
+          "verdant-gis-dataset";
+
+        const safeBaseName = baseName
+          .trim()
+          .replace(/[^a-zA-Z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+
+        const safeName = `${safeBaseName || "verdant-gis-dataset"}.zip`;
+        const disposition = `attachment; filename="${safeName}"`;
+
+        const downloadUrl = createR2PresignedUrl({
+          method: "GET",
+          key: objectKey,
+          expiresIn: 900,
+          responseContentDisposition: disposition
+        });
+
+        const nextCount = Number(entitlement.download_count || 0) + 1;
+        const { error: updateError } = await supabaseAdmin
+          .from("downloads")
+          .update({
+            download_count: nextCount,
+            last_downloaded_at: new Date().toISOString()
+          })
+          .eq("id", entitlement.id)
+          .eq("user_id", req.user.id);
+
+        if (updateError) {
+          console.error("[Verdant GIS] Download count update failed:", updateError);
+        }
+
+        console.log(
+          `[Verdant GIS] R2 secure download URL issued: user=${req.user.id} dataset=${datasetId} object=${objectKey}`
+        );
+
+        return res.json({
+          downloadUrl,
+          title: dataset.title || dataset.slug || "Dataset"
+        });
+      }
+
+      /*
+       * 4. LEGACY SUPABASE STORAGE DOWNLOADS
+       *
+       * Existing purchases continue to work.
        */
 
       const bucket =

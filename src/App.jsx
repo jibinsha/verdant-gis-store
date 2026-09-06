@@ -3366,7 +3366,7 @@ function Explore() {
 
         const initial = requestedCategory === "All"
           ? explorableDatasets[0]
-          : datasets.find(
+          : explorableDatasets.find(
               (d) =>
                 slugifyCategory(d.category) === requestedCategory
             );
@@ -7204,7 +7204,7 @@ function AdminUpload() {
               <span>
                 {sourceFile
                   ? `✓ ${sourceFile.name}`
-                  : "Optional. Stored in the private dataset-files bucket."}
+                  : "Optional. Large paid source files are stored securely in Cloudflare R2."}
               </span>
             </label>
           </div>

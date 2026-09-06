@@ -171,11 +171,61 @@ export async function createDatasetWithFiles({
 
   let downloadPath = null;
   if (sourceFile) {
-    downloadPath = `${slug}/${sourceFile.name}`;
-    const { error: sourceError } = await supabase.storage
-      .from("dataset-files")
-      .upload(downloadPath, sourceFile, { upsert: true, contentType: sourceFile.type || "application/zip" });
-    if (sourceError) throw sourceError;
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
+
+    if (sessionError || !sessionData?.session?.access_token) {
+      throw new Error("Please sign in before uploading a dataset source file.");
+    }
+
+    const paymentApi =
+      import.meta.env.VITE_PAYMENT_API_URL ||
+      "http://localhost:8787";
+
+    const contentType =
+      sourceFile.type || "application/octet-stream";
+
+    const uploadResponse = await fetch(
+      `${paymentApi}/api/admin/r2/upload-url`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        },
+        body: JSON.stringify({
+          slug,
+          filename: sourceFile.name,
+          contentType,
+          size: sourceFile.size,
+        }),
+      }
+    );
+
+    const uploadBody = await uploadResponse.json().catch(() => ({}));
+
+    if (!uploadResponse.ok || !uploadBody.uploadUrl) {
+      throw new Error(
+        uploadBody.error ||
+          "Could not prepare the R2 source-file upload."
+      );
+    }
+
+    const r2Upload = await fetch(uploadBody.uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": contentType,
+      },
+      body: sourceFile,
+    });
+
+    if (!r2Upload.ok) {
+      throw new Error(
+        `R2 upload failed (${r2Upload.status}). Please check the R2 bucket CORS policy.`
+      );
+    }
+
+    downloadPath = `r2:${uploadBody.objectKey}`;
   }
 
   const { data, error } = await supabase.from("datasets").insert({
@@ -222,8 +272,8 @@ export async function updateDataset(id, changes) {
 export async function deleteDataset(dataset) {
   if (!supabase) throw new Error("Supabase is not configured.");
 
-  // Delete stored files before deleting the dataset record.
-  // Files use the dataset slug as their folder.
+  // Delete preview files from Supabase. Paid source files are now stored
+  // in private Cloudflare R2 and are deleted through the authenticated backend.
   const folder = dataset.slug;
 
   const listAndRemove = async (bucket) => {
@@ -237,7 +287,36 @@ export async function deleteDataset(dataset) {
   };
 
   await listAndRemove("dataset-previews");
-  await listAndRemove("dataset-files");
+
+  if (String(dataset.download_path || "").startsWith("r2:")) {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData?.session?.access_token) {
+      throw new Error("Please sign in before deleting an R2 dataset file.");
+    }
+
+    const paymentApi =
+      import.meta.env.VITE_PAYMENT_API_URL ||
+      "http://localhost:8787";
+
+    const response = await fetch(`${paymentApi}/api/admin/r2/delete`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${sessionData.session.access_token}`,
+      },
+      body: JSON.stringify({
+        objectKey: String(dataset.download_path).slice(3).trim(),
+      }),
+    });
+
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(body.error || "Could not delete the R2 source file.");
+    }
+  } else {
+    // Legacy datasets uploaded before R2 continue to be cleaned from Supabase.
+    await listAndRemove("dataset-files");
+  }
 
   const { error } = await supabase.from("datasets").delete().eq("id", dataset.id);
   if (error) throw error;
