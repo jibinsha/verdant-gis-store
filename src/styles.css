@@ -2141,3 +2141,244 @@ footer { border-top:1px solid var(--line); background:#fff; }
     background: #dff2e9;
   }
 }
+
+/* =========================================================
+   VERDANT HOME — VISUAL POLISH
+========================================================= */
+
+/* HERO BACKGROUND */
+.hero {
+  background:
+    radial-gradient(
+      circle at 85% 15%,
+      rgba(83, 180, 139, .13),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 8% 65%,
+      rgba(208, 232, 220, .35),
+      transparent 30%
+    ),
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #f5faf7 55%,
+      #eef7f2 100%
+    ) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* subtle decorative glow */
+.hero::before {
+  content: "";
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  right: -180px;
+  top: -180px;
+  border-radius: 50%;
+  background: rgba(21, 118, 90, .055);
+  pointer-events: none;
+}
+
+.hero-grid {
+  position: relative;
+  z-index: 1;
+}
+
+/* HERO EYEBROW */
+.eyebrow {
+  color: #086b50 !important;
+}
+
+.pulse {
+  background: #27b77d !important;
+  box-shadow:
+    0 0 0 5px #dff4e9,
+    0 0 20px rgba(39,183,125,.25);
+}
+
+/* HERO TITLE */
+.hero h1 {
+  color: #102820;
+}
+
+.hero h1 em {
+  background: linear-gradient(
+    135deg,
+    #087052,
+    #16a477
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* HERO DESCRIPTION */
+.hero-copy > p {
+  color: #5f7169;
+}
+
+/* SEARCH BOX */
+.hero-search {
+  border: 1px solid #cfe2d8 !important;
+  background: rgba(255,255,255,.92) !important;
+  box-shadow:
+    0 18px 45px rgba(15,95,70,.09),
+    0 2px 6px rgba(15,95,70,.04);
+  transition: .2s ease;
+}
+
+.hero-search:focus-within {
+  border-color: #79b69c !important;
+  box-shadow:
+    0 18px 50px rgba(15,95,70,.13),
+    0 0 0 4px rgba(21,118,90,.08);
+}
+
+.hero-search a,
+.hero-search button {
+  background: linear-gradient(
+    135deg,
+    #087052,
+    #12916d
+  ) !important;
+  box-shadow: 0 7px 18px rgba(8,112,82,.18);
+}
+
+/* HERO MAP */
+.hero-map {
+  border: 1px solid rgba(125, 194, 166, .28);
+  box-shadow:
+    0 30px 80px rgba(13,57,42,.20),
+    0 8px 25px rgba(13,57,42,.08);
+  position: relative;
+}
+
+.hero-map::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.08);
+  pointer-events: none;
+}
+
+/* HERO META */
+.hero-meta {
+  color: #60746b;
+}
+
+.hero-meta svg {
+  color: #0b7656;
+}
+
+/* SECTION BACKGROUND */
+.section {
+  position: relative;
+}
+
+/* CATEGORY CARDS */
+.category-card {
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff 0%,
+      #f8fcfa 100%
+    ) !important;
+  border-color: #d9e7df !important;
+  box-shadow: 0 8px 25px rgba(18,62,46,.035);
+}
+
+.category-card:hover {
+  border-color: #a8cdbb !important;
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff,
+      #eef8f3
+    ) !important;
+  box-shadow:
+    0 18px 45px rgba(18,62,46,.10);
+}
+
+/* CATEGORY ICON */
+.category-icon {
+  background:
+    linear-gradient(
+      135deg,
+      #e3f5ec,
+      #d6eee3
+    ) !important;
+  color: #087052 !important;
+}
+
+/* FEATURED DATASET CARDS */
+.dataset-card {
+  border-color: #d8e6df !important;
+  box-shadow:
+    0 10px 30px rgba(18,62,46,.045);
+}
+
+.dataset-card:hover {
+  border-color: #a9cdbd !important;
+  box-shadow:
+    0 22px 55px rgba(18,62,46,.11);
+}
+
+/* TRUST SECTION */
+.trust {
+  background:
+    radial-gradient(
+      circle at 90% 10%,
+      rgba(54,174,126,.13),
+      transparent 30%
+    ),
+    linear-gradient(
+      135deg,
+      #e7f5ee,
+      #f3faf6
+    ) !important;
+  border-color: #cfe5d9 !important;
+  box-shadow: 0 18px 50px rgba(15,95,70,.06);
+}
+
+/* TRUST CARDS */
+.trust-items div {
+  box-shadow: 0 7px 22px rgba(18,62,46,.04);
+  transition: .18s ease;
+}
+
+.trust-items div:hover {
+  transform: translateY(-2px);
+  border-color: #b7d7c8;
+  box-shadow: 0 14px 30px rgba(18,62,46,.08);
+}
+
+/* SECTION HEADINGS */
+.section-head h2 {
+  color: #142d24;
+}
+
+.section-kicker {
+  color: #087052 !important;
+}
+
+/* MOBILE */
+@media (max-width: 600px) {
+  .hero {
+    background:
+      linear-gradient(
+        180deg,
+        #ffffff 0%,
+        #f2f9f5 100%
+      ) !important;
+  }
+
+  .hero-search {
+    box-shadow:
+      0 12px 30px rgba(15,95,70,.08);
+  }
+}
