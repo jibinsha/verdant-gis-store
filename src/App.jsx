@@ -7731,11 +7731,27 @@ function ScrollToTop() {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: "auto",
-    });
+    // Disable browser scroll restoration so mobile browsers
+    // don't restore the previous catalogue position.
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+
+    // Scroll immediately
+    window.scrollTo(0, 0);
+
+    // Scroll again after the new page has rendered
+    const timer = window.setTimeout(() => {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "auto",
+      });
+    }, 50);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [pathname]);
 
   return null;
