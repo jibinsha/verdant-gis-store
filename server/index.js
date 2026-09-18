@@ -126,6 +126,26 @@ try {
 
 const files = req.files || {};
 
+let dataset = {};
+
+try {
+  const rawDataset = req.body?.dataset;
+
+  if (typeof rawDataset === "string") {
+    dataset = JSON.parse(rawDataset);
+  } else if (rawDataset && typeof rawDataset === "object") {
+    dataset = rawDataset;
+  } else {
+    dataset = req.body || {};
+  }
+} catch (error) {
+  console.error("[n8n staging] Invalid dataset JSON:", req.body?.dataset);
+
+  return res.status(400).json({
+    error: "Invalid dataset JSON."
+  });
+}
+
       const staged = {
         id: crypto.randomUUID(),
         createdAt: Date.now(),
