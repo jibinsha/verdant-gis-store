@@ -7082,13 +7082,17 @@ async function importFromN8n() {
   setN8nImporting(true);
 
   try {
-    const response = await fetch(
-      "https://verdant-gis-api.onrender.com/api/admin/n8n/import",
-      {
-        method: "GET",
-        credentials: "include",
-      }
-    );
+const token = await getAccessToken();
+
+const response = await fetch(
+  "https://verdant-gis-api.onrender.com/api/admin/n8n/import",
+  {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
 
     if (!response.ok) {
       throw new Error(
