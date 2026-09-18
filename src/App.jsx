@@ -7083,7 +7083,7 @@ async function importFromN8n() {
 
   try {
     const response = await fetch(
-      "/api/admin/n8n/import",
+      "https://verdant-gis-api.onrender.com/api/admin/n8n/import",
       {
         method: "GET",
         credentials: "include",
