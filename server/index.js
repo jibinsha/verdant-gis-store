@@ -111,8 +111,20 @@ app.post(
         });
       }
 
-      const dataset = req.body || {};
-      const files = req.files || {};
+let dataset = {};
+
+try {
+  dataset =
+    typeof req.body?.dataset === "string"
+      ? JSON.parse(req.body.dataset)
+      : (req.body?.dataset || {});
+} catch (err) {
+  return res.status(400).json({
+    error: "Invalid dataset JSON."
+  });
+}
+
+const files = req.files || {};
 
       const staged = {
         id: crypto.randomUUID(),
