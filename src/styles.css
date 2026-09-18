@@ -2382,3 +2382,57 @@ footer { border-top:1px solid var(--line); background:#fff; }
       0 12px 30px rgba(15,95,70,.08);
   }
 }
+/* =========================================================
+   N8N DATASET IMPORT
+========================================================= */
+
+.n8n-import-panel {
+  max-width: 1184px;
+  margin: 22px auto 0;
+  padding: 16px 20px;
+  border: 1px solid #cfe4d8;
+  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    #f1faf5,
+    #ffffff
+  );
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  box-shadow: 0 10px 30px rgba(20,55,43,.05);
+}
+
+.n8n-import-panel > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.n8n-import-panel strong {
+  font-size: 14px;
+  color: #163f2e;
+}
+
+.n8n-import-panel span {
+  font-size: 11px;
+  color: #68776f;
+}
+
+.n8n-import-panel button {
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .n8n-import-panel {
+    margin: 15px 17px 0;
+    padding: 15px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .n8n-import-panel button {
+    width: 100%;
+  }
+}

@@ -6,10 +6,29 @@ import Razorpay from "razorpay";
 import { createClient } from "@supabase/supabase-js";
 import { resolveStudioBoundaries } from "./gis/studioBoundaries.js";
 import { Resend } from "resend";
+import multer from "multer";
+import fs from "node:fs";
+import path from "node:path";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const app = express();
 const PORT = Number(process.env.PORT || 8787);
+const N8N_STAGING_DIR = path.join(
+  process.cwd(),
+  ".n8n-staging"
+);
+
+fs.mkdirSync(N8N_STAGING_DIR, {
+  recursive: true
+});
+
+const n8nUpload = multer({
+  dest: N8N_STAGING_DIR,
+  limits: {
+    files: 3,
+    fileSize: 1024 * 1024 * 1024
+  }
+});
 
 const required = [
   "SUPABASE_URL",
@@ -46,6 +65,366 @@ app.use(
       return callback(new Error("Origin not allowed by CORS"));
     }
   })
+);
+
+/* ============================================================
+   N8N DATASET STAGING
+   ------------------------------------------------------------
+   n8n can temporarily stage dataset files here.
+   This endpoint DOES NOT access R2 or Supabase.
+   The admin must manually import/review/publish.
+   ============================================================ */
+
+app.post(
+  "/api/admin/n8n/stage",
+  n8nUpload.fields([
+    { name: "preview", maxCount: 1 },
+    { name: "previewImage", maxCount: 1 },
+    { name: "source", maxCount: 1 }
+  ]),
+  (req, res) => {
+    try {
+      const secret =
+        req.headers["x-n8n-import-secret"];
+
+      if (
+        !secret ||
+        !process.env.N8N_IMPORT_SECRET ||
+        !timingSafeHexEqual(
+          crypto
+            .createHash("sha256")
+            .update(String(secret))
+            .digest("hex"),
+          crypto
+            .createHash("sha256")
+            .update(
+              String(
+                process.env.N8N_IMPORT_SECRET
+              )
+            )
+            .digest("hex")
+        )
+      ) {
+        return res.status(401).json({
+          error: "Invalid n8n import secret."
+        });
+      }
+
+      const dataset = req.body || {};
+      const files = req.files || {};
+
+      const staged = {
+        id: crypto.randomUUID(),
+        createdAt: Date.now(),
+
+        dataset: {
+          title: dataset.title || "",
+          description:
+            dataset.description || "",
+          categoryId:
+            dataset.categoryId || "",
+          location:
+            dataset.location || "",
+          coverage:
+            dataset.coverage || "",
+          price:
+            dataset.price ?? "0",
+          formats:
+            dataset.formats || "",
+          featureCount:
+            dataset.featureCount || "",
+          crs:
+            dataset.crs || "EPSG:4326",
+          source:
+            dataset.source || "",
+          updatedLabel:
+            dataset.updatedLabel || ""
+        },
+
+        files: {
+          preview:
+            files.preview?.[0]
+              ? {
+                  path:
+                    files.preview[0].path,
+                  name:
+                    files.preview[0].originalname,
+                  type:
+                    files.preview[0].mimetype
+                }
+              : null,
+
+          previewImage:
+            files.previewImage?.[0]
+              ? {
+                  path:
+                    files.previewImage[0].path,
+                  name:
+                    files.previewImage[0].originalname,
+                  type:
+                    files.previewImage[0].mimetype
+                }
+              : null,
+
+          source:
+            files.source?.[0]
+              ? {
+                  path:
+                    files.source[0].path,
+                  name:
+                    files.source[0].originalname,
+                  type:
+                    files.source[0].mimetype
+                }
+              : null
+        }
+      };
+
+      const manifestPath = path.join(
+        N8N_STAGING_DIR,
+        `${staged.id}.json`
+      );
+
+      fs.writeFileSync(
+        manifestPath,
+        JSON.stringify(staged, null, 2),
+        "utf8"
+      );
+
+      return res.json({
+        ok: true,
+        importId: staged.id
+      });
+    } catch (error) {
+      console.error(
+        "[n8n staging] Failed:",
+        error
+      );
+
+      return res.status(500).json({
+        error:
+          "Could not stage dataset for admin review."
+      });
+    }
+  }
+);
+
+app.get(
+  "/api/admin/n8n/import",
+  authenticate,
+  async (req, res) => {
+    try {
+      const profileResult =
+        await supabaseAdmin
+          .from("profiles")
+          .select("role")
+          .eq("id", req.user.id)
+          .maybeSingle();
+
+      if (
+        profileResult.error ||
+        profileResult.data?.role !== "admin"
+      ) {
+        return res.status(403).json({
+          error: "Admin access is required."
+        });
+      }
+
+      const files =
+        fs
+          .readdirSync(N8N_STAGING_DIR)
+          .filter(
+            name =>
+              name.endsWith(".json")
+          )
+          .map(name => {
+            const fullPath =
+              path.join(
+                N8N_STAGING_DIR,
+                name
+              );
+
+            try {
+              return {
+                fullPath,
+                data: JSON.parse(
+                  fs.readFileSync(
+                    fullPath,
+                    "utf8"
+                  )
+                )
+              };
+            } catch {
+              return null;
+            }
+          })
+          .filter(Boolean)
+          .sort(
+            (a, b) =>
+              (b.data.createdAt || 0) -
+              (a.data.createdAt || 0)
+          );
+
+      const staged = files[0];
+
+      if (!staged) {
+        return res.status(404).json({
+          error:
+            "No dataset is waiting for import from n8n."
+        });
+      }
+
+      const data =
+        staged.data;
+
+      function makeDownloadUrl(file) {
+        if (!file?.path) {
+          return null;
+        }
+
+        const filename =
+          path.basename(file.path);
+
+        return `/api/admin/n8n/file/${data.id}/${filename}`;
+      }
+
+      return res.json({
+        ok: true,
+
+        importId: data.id,
+
+        dataset: data.dataset,
+
+        files: {
+          preview:
+            makeDownloadUrl(
+              data.files.preview
+            ),
+
+          previewName:
+            data.files.preview?.name ||
+            null,
+
+          previewImage:
+            makeDownloadUrl(
+              data.files.previewImage
+            ),
+
+          previewImageName:
+            data.files.previewImage?.name ||
+            null,
+
+          source:
+            makeDownloadUrl(
+              data.files.source
+            ),
+
+          sourceName:
+            data.files.source?.name ||
+            null
+        }
+      });
+    } catch (error) {
+      console.error(
+        "[n8n import] Failed:",
+        error
+      );
+
+      return res.status(500).json({
+        error:
+          "Could not load staged dataset."
+      });
+    }
+  }
+);
+
+app.get(
+  "/api/admin/n8n/file/:importId/:filename",
+  authenticate,
+  async (req, res) => {
+    try {
+      const importId =
+        String(
+          req.params.importId || ""
+        ).trim();
+
+      const filename =
+        path.basename(
+          String(
+            req.params.filename || ""
+          )
+        );
+
+      const manifestPath =
+        path.join(
+          N8N_STAGING_DIR,
+          `${importId}.json`
+        );
+
+      if (
+        !fs.existsSync(
+          manifestPath
+        )
+      ) {
+        return res.status(404).json({
+          error:
+            "Staged dataset not found."
+        });
+      }
+
+      const manifest =
+        JSON.parse(
+          fs.readFileSync(
+            manifestPath,
+            "utf8"
+          )
+        );
+
+      const allowedFiles = [
+        manifest.files.preview,
+        manifest.files.previewImage,
+        manifest.files.source
+      ].filter(Boolean);
+
+      const file =
+        allowedFiles.find(
+          item =>
+            path.basename(
+              item.path
+            ) === filename
+        );
+
+      if (!file) {
+        return res.status(404).json({
+          error:
+            "Staged file not found."
+        });
+      }
+
+      if (
+        !fs.existsSync(file.path)
+      ) {
+        return res.status(404).json({
+          error:
+            "Staged file has expired."
+        });
+      }
+
+      return res.sendFile(
+        path.resolve(file.path)
+      );
+    } catch (error) {
+      console.error(
+        "[n8n staging file] Failed:",
+        error
+      );
+
+      return res.status(500).json({
+        error:
+          "Could not retrieve staged file."
+      });
+    }
+  }
 );
 
 const supabaseAdmin = createClient(

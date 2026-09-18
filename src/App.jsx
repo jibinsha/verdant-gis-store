@@ -7063,6 +7063,9 @@ function AdminUpload() {
   const [busy, setBusy] =
     useState(false);
 
+  const [n8nImporting, setN8nImporting] =
+    useState(false);
+
   useEffect(() => {
     getCurrentUserProfile().then(
       ({ profile }) =>
@@ -7074,7 +7077,141 @@ function AdminUpload() {
         setCategories(data || [])
     );
   }, []);
+async function importFromN8n() {
+  setStatus("");
+  setN8nImporting(true);
 
+  try {
+    const response = await fetch(
+      "/api/admin/n8n/import",
+      {
+        method: "GET",
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        "No dataset is waiting for import from n8n."
+      );
+    }
+
+    const data = await response.json();
+
+    if (!data || !data.dataset) {
+      throw new Error(
+        "n8n returned an invalid dataset."
+      );
+    }
+
+    const dataset = data.dataset;
+
+    setForm((prev) => ({
+      ...prev,
+      title: dataset.title || "",
+      description: dataset.description || "",
+      categoryId: dataset.categoryId || "",
+      location: dataset.location || "",
+      coverage: dataset.coverage || "",
+      price: String(dataset.price ?? "0"),
+      formats: Array.isArray(dataset.formats)
+        ? dataset.formats.join(", ")
+        : dataset.formats || "",
+      featureCount: String(
+        dataset.featureCount ?? ""
+      ),
+      crs: dataset.crs || "EPSG:4326",
+      source: dataset.source || "",
+      updatedLabel:
+        dataset.updatedLabel || "",
+    }));
+
+    if (data.files?.preview) {
+      const response =
+        await fetch(data.files.preview);
+
+      const blob =
+        await response.blob();
+
+      const filename =
+        data.files.previewName ||
+        "preview.geojson";
+
+      setPreviewFile(
+        new File(
+          [blob],
+          filename,
+          {
+            type:
+              blob.type ||
+              "application/geo+json",
+          }
+        )
+      );
+    }
+
+    if (data.files?.previewImage) {
+      const response =
+        await fetch(
+          data.files.previewImage
+        );
+
+      const blob =
+        await response.blob();
+
+      const filename =
+        data.files.previewImageName ||
+        "preview.jpg";
+
+      setPreviewImageFile(
+        new File(
+          [blob],
+          filename,
+          {
+            type:
+              blob.type ||
+              "image/jpeg",
+          }
+        )
+      );
+    }
+
+    if (data.files?.source) {
+      const response =
+        await fetch(data.files.source);
+
+      const blob =
+        await response.blob();
+
+      const filename =
+        data.files.sourceName ||
+        "dataset.zip";
+
+      setSourceFile(
+        new File(
+          [blob],
+          filename,
+          {
+            type:
+              blob.type ||
+              "application/octet-stream",
+          }
+        )
+      );
+    }
+
+    setStatus(
+      "Dataset imported from n8n. Please review everything before publishing."
+    );
+  } catch (err) {
+    setStatus(
+      err.message ||
+        "Could not import dataset from n8n."
+    );
+  } finally {
+    setN8nImporting(false);
+  }
+}
   function update(
     key,
     value
@@ -7213,6 +7350,28 @@ function AdminUpload() {
       <Nav />
 
       <main className="admin-upload">
+<div className="n8n-import-panel">
+  <div>
+    <strong>
+      Import dataset from n8n
+    </strong>
+
+    <span>
+      Automatically prepare the upload form and files for your review.
+    </span>
+  </div>
+
+  <button
+    type="button"
+    className="secondary-btn"
+    onClick={importFromN8n}
+    disabled={n8nImporting || busy}
+  >
+    {n8nImporting
+      ? "Importing..."
+      : "↻ Import from n8n"}
+  </button>
+</div>
         <div className="page-hero compact">
           <span className="section-kicker">
             DATA MANAGEMENT
