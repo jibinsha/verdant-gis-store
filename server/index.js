@@ -111,10 +111,10 @@ app.post(
         });
       }
 
-let dataset = {};
+let n8nDataset = {};
 
 try {
-  dataset =
+  n8nDataset =
     typeof req.body?.dataset === "string"
       ? JSON.parse(req.body.dataset)
       : (req.body?.dataset || {});
@@ -126,53 +126,33 @@ try {
 
 const files = req.files || {};
 
-let dataset = {};
-
-try {
-  const rawDataset = req.body?.dataset;
-
-  if (typeof rawDataset === "string") {
-    dataset = JSON.parse(rawDataset);
-  } else if (rawDataset && typeof rawDataset === "object") {
-    dataset = rawDataset;
-  } else {
-    dataset = req.body || {};
-  }
-} catch (error) {
-  console.error("[n8n staging] Invalid dataset JSON:", req.body?.dataset);
-
-  return res.status(400).json({
-    error: "Invalid dataset JSON."
-  });
-}
-
       const staged = {
         id: crypto.randomUUID(),
         createdAt: Date.now(),
 
-        dataset: {
-          title: dataset.title || "",
-          description:
-            dataset.description || "",
-          categoryId:
-            dataset.categoryId || "",
-          location:
-            dataset.location || "",
-          coverage:
-            dataset.coverage || "",
-          price:
-            dataset.price ?? "0",
-          formats:
-            dataset.formats || "",
-          featureCount:
-            dataset.featureCount || "",
-          crs:
-            dataset.crs || "EPSG:4326",
-          source:
-            dataset.source || "",
-          updatedLabel:
-            dataset.updatedLabel || ""
-        },
+dataset: {
+  title: n8nDataset.title || "",
+  description:
+    n8nDataset.description || "",
+  categoryId:
+    n8nDataset.categoryId || "",
+  location:
+    n8nDataset.location || "",
+  coverage:
+    n8nDataset.coverage || "",
+  price:
+    n8nDataset.price ?? "0",
+  formats:
+    n8nDataset.formats || "",
+  featureCount:
+    n8nDataset.featureCount || "",
+  crs:
+    n8nDataset.crs || "EPSG:4326",
+  source:
+    n8nDataset.source || "",
+  updatedLabel:
+    n8nDataset.updatedLabel || ""
+},
 
         files: {
           preview:
